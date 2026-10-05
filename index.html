@@ -400,10 +400,10 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       <p class="empty" id="exportSummary" style="font-size:13px;margin:0"></p>
       <button class="btn primary" type="button" id="exportPdf">Exportar PDF</button>
       <div id="exportUnavailable" hidden style="display:flex;flex-direction:column;gap:8px">
-        <p class="empty" style="font-size:13px;margin:0">La descarga del PDF necesita que abras el plano con tu cuenta iniciada en claude.ai o en la app de Claude. Mientras tanto, puedes ver el informe en pantalla, guardar las imágenes de los mapas y copiar el inventario.</p>
+        <p class="empty" style="font-size:13px;margin:0">La descarga del PDF necesita que abras el plano con tu cuenta iniciada en claude.ai o en la app de Claude. También puedes hacer la actividad en la versión web: https://plano-edam.onrender.com</p>
         <button class="btn" type="button" id="retryExport">Reintentar descarga</button>
       </div>
-      <button class="btn" type="button" id="showReport">Ver informe en pantalla</button>
+      <button class="btn" type="button" id="showReport" hidden>Ver informe en pantalla</button>
       <div class="toast" id="toast" aria-live="polite"></div>
     </section>
   </aside>
@@ -1243,8 +1243,6 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     $('printRow').hidden=false;
     $('printReportTop').hidden=false;
     $('reportHint').textContent='Revisa el informe y pulsa IMPRIMIR. En el cuadro de impresión elige "Guardar como PDF" para obtener el archivo y entregarlo.';
-    var uq=$('exportUnavailable').querySelector('p');
-    if(uq)uq.textContent='Para obtener el informe en PDF, pulsa "Ver informe en pantalla" y después IMPRIMIR → Guardar como PDF.';
     $('retryExport').hidden=true;
   }
   function doPrint(){try{window.print();}catch(e){toast('Tu navegador no permite imprimir desde aquí');}}
