@@ -109,6 +109,8 @@ svg.map.placing{cursor:crosshair}
 .m-fence{fill:none;stroke:var(--ink);stroke-width:3;stroke-dasharray:10 7}
 .m-zone{fill:var(--zone);stroke:var(--zone-line);stroke-width:2}
 .m-zone.light{fill:var(--zone-light)}
+.m-entry{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.m-entry-t{fill:var(--ink);font-size:12px;font-family:var(--font-body)}
 .m-dash{fill:var(--bg);stroke:var(--zone-line);stroke-width:2;stroke-dasharray:6 4}
 .m-pipe{fill:var(--zone-line)}
 .m-badge{fill:var(--accent)}
@@ -286,10 +288,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
           <rect class="m-road" x="160" y="80" width="40" height="72"></rect>
           <text class="m-label" x="214" y="106">Vial de acceso</text>
           <text class="m-label b" x="214" y="140">Acceso principal</text>
+          <rect class="m-road" x="378" y="80" width="99" height="86"></rect>
+          <text class="m-label" x="486" y="106">Acceso de vehículos</text>
           <rect class="m-fence" x="91.5" y="151.5" width="1017" height="497"></rect>
           <rect class="m-paper" x="154" y="144" width="52" height="14"></rect>
+          <rect class="m-road" x="378" y="144" width="99" height="22"></rect>
           <rect class="m-paper" x="1102" y="556" width="14" height="48"></rect>
-          <text class="m-sector" x="560" y="174">VALLADO · SECTOR N</text>
+          <text class="m-sector" x="1000" y="174">SECTOR N</text>
           <text class="m-sector" x="560" y="640">SECTOR S</text>
           <text class="m-sector" transform="translate(112 400) rotate(-90)" text-anchor="middle">SECTOR O</text>
           <text class="m-sector" transform="translate(1090 260) rotate(90)" text-anchor="middle">SECTOR E</text>
@@ -472,8 +477,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function budgetVal(){var v=Number(String(state.budget||'').replace(/\./g,'').replace(',','.'));return isFinite(v)&&v>0?v:0;}
 
   var ZONES=[
-    {k:'A',name:'Garita',full:'Garita / control de accesos',sub:['Control de accesos'],x:120,y:168,w:120,h:66},
-    {k:'B',name:'Aparcamiento',full:'Aparcamiento de contratas y visitas',sub:['Contratas y visitas'],x:262,y:176,w:210,h:96,light:true},
+    {k:'A',name:'Garita',full:'Garita / control de accesos',sub:[],x:208,y:160,w:76,h:50,compact:true},
+    {k:'B',name:'Zona Parking',full:'Zona de parking (contratas y visitas)',sub:['Contratas y visitas'],x:378,y:166,w:413,h:118,light:true},
     {k:'C',name:'Administración',full:'Administración / sala de control (SCADA)',sub:['P. baja: oficinas','P. 1: sala de control (SCADA)'],x:120,y:306,w:220,h:140},
     {k:'D',name:'Nave de ósmosis inversa y bombeo',full:'Nave de ósmosis inversa y bombeo',sub:['Membranas · bombas de alta presión','Puertas: norte (personal) · sur (mantenimiento)'],x:400,y:320,w:390,h:240},
     {k:'E',name:'Reactivos',full:'Depósito de reactivos',sub:['Hipoclorito','y otros químicos'],x:836,y:178,w:150,h:104},
@@ -483,8 +488,9 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   var HIT_ZONES=ZONES.concat([
     {k:'E',full:'Muelle de descarga de reactivos',x:836,y:282,w:150,h:32},
     {k:'G',full:'Depósitos de agua producto',x:126,y:496,w:214,h:104},
-    {k:'I',full:'Acceso secundario / puerta de emergencia',x:1060,y:548,w:70,h:64},
-    {k:'A',full:'Acceso principal',x:150,y:80,w:60,h:88}
+    {k:'I',full:'Acceso secundario / puerta de emergencia',x:1060,y:548,w:70,h:80},
+    {k:'A',full:'Acceso principal',x:150,y:80,w:60,h:88},
+    {k:'B',full:'Acceso de vehículos al parking',x:378,y:80,w:99,h:86}
   ]);
 
   var $=function(id){return document.getElementById(id);};
@@ -498,7 +504,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 
   function defaultState(){
     return {team:'',grid:true,cones:true,next:3,markers:[
-      {id:1,code:'LA',x:226,y:200,rot:0,note:'Ejemplo: lector en la esclusa peatonal',example:true},
+      {id:1,code:'LA',x:186,y:186,rot:0,note:'Ejemplo: lector en la esclusa peatonal',example:true},
       {id:2,code:'CF',x:214,y:158,rot:200,note:'Ejemplo: cámara orientada al acceso principal',example:true}
     ]};
   }
@@ -521,6 +527,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   (function drawZones(){
     var g=$('zonesLayer');
     ZONES.forEach(function(z){
+      if(z.compact){
+        g.appendChild(el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,'class':'m-zone'}));
+        g.appendChild(el('rect',{x:z.x+6,y:z.y+6,width:20,height:20,'class':'m-badge'}));
+        g.appendChild(el('text',{x:z.x+16,y:z.y+21,'text-anchor':'middle','class':'m-badge-t','font-size':'12'},z.k));
+        g.appendChild(el('text',{x:z.x+z.w/2,y:z.y+42,'text-anchor':'middle','class':'m-name','font-size':'14'},z.name));
+        return;
+      }
       g.appendChild(el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,'class':'m-zone'+(z.light?' light':'')}));
       g.appendChild(el('rect',{x:z.x+8,y:z.y+8,width:26,height:26,'class':'m-badge'}));
       g.appendChild(el('text',{x:z.x+21,y:z.y+26.5,'text-anchor':'middle','class':'m-badge-t'},z.k));
@@ -538,8 +551,18 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     g.appendChild(el('text',{x:897,y:742,'class':'m-sea-s'},'Toma de mar / emisario'));
     g.appendChild(el('rect',{x:1072,y:562,width:26,height:26,'class':'m-badge'}));
     g.appendChild(el('text',{x:1085,y:580.5,'text-anchor':'middle','class':'m-badge-t'},'I'));
-    g.appendChild(el('text',{x:1064,y:581,'text-anchor':'end','class':'m-name','font-size':'14'},'Acceso secundario'));
-    g.appendChild(el('text',{x:1098,y:606,'text-anchor':'end','class':'m-sub'},'Puerta de emergencia'));
+    g.appendChild(el('text',{x:1098,y:607,'text-anchor':'end','class':'m-name','font-size':'12'},'Acceso secundario'));
+    g.appendChild(el('text',{x:1098,y:623,'text-anchor':'end','class':'m-sub'},'Puerta de emergencia'));
+    /* Entradas a edificios */
+    function entry(x,y,w,h,vertical){
+      g.appendChild(el('rect',{x:x,y:y,width:w,height:h,'class':'m-entry'}));
+      if(vertical)g.appendChild(el('text',{'class':'m-entry-t','text-anchor':'middle',transform:'translate('+(x+w/2+4)+' '+(y+h/2)+') rotate(90)'},'Entrada'));
+      else g.appendChild(el('text',{x:x+w/2,y:y+h/2+4,'class':'m-entry-t','text-anchor':'middle'},'Entrada'));
+    }
+    entry(193,297,72,18);
+    entry(554,311,72,18);
+    entry(977,196,18,72,true);
+    entry(986,491,72,18);
     g.appendChild(el('text',{x:520,y:600,'class':'m-label','font-style':'italic'},'Viales interiores'));
   })();
 
@@ -993,7 +1016,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     '.m-paper{fill:#FFFFFF}.m-sea{fill:#CDE0E8}.m-wave{fill:none;stroke:#2B5566;stroke-opacity:.18;stroke-width:2}.m-coast{fill:#2B5566;opacity:.55}'+
     '.m-road{fill:#D2D7D6}.m-roadline{stroke:#A3ADB2}.m-fence{fill:none;stroke:#1C2427;stroke-width:3;stroke-dasharray:10 7}'+
     '.m-zone{fill:#E2E7E5;stroke:#5A666C;stroke-width:2}.m-zone.light{fill:#EEF1F0}.m-dash{fill:#F1F4F3;stroke:#5A666C;stroke-width:2;stroke-dasharray:6 4}'+
-    '.m-pipe{fill:#5A666C}.m-badge{fill:#1F5F8B}.m-badge-t{fill:#FFFFFF;font-weight:700;font-size:15px}.m-name{fill:#1C2427;font-weight:600;font-size:16px}'+
+    '.m-entry{fill:#FFFFFF;stroke:#1C2427;stroke-width:1.5}.m-entry-t{fill:#1C2427;font-size:12px}.m-pipe{fill:#5A666C}.m-badge{fill:#1F5F8B}.m-badge-t{fill:#FFFFFF;font-weight:700;font-size:15px}.m-name{fill:#1C2427;font-weight:600;font-size:16px}'+
     '.m-sub{fill:#55616A;font-size:12px}.m-label{fill:#55616A;font-size:13px}.m-label.b{fill:#1C2427;font-weight:600}'+
     '.m-sector{fill:#55616A;font-size:12px;font-weight:600;letter-spacing:2px}.m-sea-t{fill:#2B5566;font-size:20px;font-weight:600;letter-spacing:6px}.m-sea-s{fill:#2B5566;font-size:12px}'+
     '.m-ink{fill:#1C2427}.m-inkline{stroke:#1C2427;fill:none}.m-grid{stroke:rgba(28,36,39,0.16);stroke-width:1}.m-gridt{fill:#55616A;font-family:Courier,monospace;font-size:13px;font-weight:700}'+
