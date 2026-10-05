@@ -456,8 +456,9 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   var LAYERS=[
     {k:'acc',t:'Control de acceso',codes:['TE','BO','BA','CE','AD','LA']},
     {k:'vid',t:'CCTV',codes:['CF','CP']},
-    {k:'det',t:'Detectores',codes:['CM','DV','DP']},
-    {k:'per',t:'Perímetro y señalización',codes:['SE','IL','SI','BY','PR']}
+    {k:'det',t:'Detectores',codes:['CM','DV']},
+    {k:'per',t:'Perímetro',codes:['DP','BY','PR']},
+    {k:'sen',t:'Señalización',codes:['SE','IL','SI']}
   ];
   var LAYER_OF={};LAYERS.forEach(function(L){L.codes.forEach(function(c){LAYER_OF[c]=L.k;});});
   var CAT_NAME={fis:'Físicos',ele:'Electrónicos',ope:'Operativa'};
