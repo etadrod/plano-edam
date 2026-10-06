@@ -407,6 +407,20 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       </div>
       <p class="empty" id="exportSummary" style="font-size:13px;margin:0"></p>
       <button class="btn primary" type="button" id="exportPdf">Exportar PDF</button>
+      <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px">
+        <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Guardar y recuperar el trabajo</span>
+        <span class="empty" style="font-size:12px">Guarda un archivo .json con todo lo colocado (elementos, orientaciones, notas, presupuesto y observaciones). Cárgalo al volver a abrir la app para continuar.</span>
+        <div class="row">
+          <button class="btn" type="button" id="saveCfg">Guardar configuración</button>
+          <label class="btn" for="loadCfg" style="display:inline-flex;align-items:center;cursor:pointer;font-weight:500;color:var(--ink)">Cargar configuración</label>
+          <input type="file" id="loadCfg" accept=".json,application/json" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+        </div>
+        <div class="confirm" id="loadConfirm" hidden>
+          <span id="loadConfirmText">¿Sustituir el trabajo actual por el del archivo?</span>
+          <button class="btn small primary" type="button" id="loadYes">Cargar</button>
+          <button class="btn small" type="button" id="loadNo">Cancelar</button>
+        </div>
+      </div>
       <div id="exportUnavailable" hidden style="display:flex;flex-direction:column;gap:8px">
         <p class="empty" style="font-size:13px;margin:0">La descarga del PDF necesita que abras el plano con tu cuenta iniciada en claude.ai o en la app de Claude. También puedes hacer la actividad en la versión web: https://plano-edam.onrender.com</p>
         <button class="btn" type="button" id="retryExport">Reintentar descarga</button>
@@ -1302,6 +1316,53 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   });
 
   var toastT;function toast(msg){var t=$('toast');t.textContent=msg;clearTimeout(toastT);toastT=setTimeout(function(){t.textContent='';},3500);}
+
+  /* Guardar / cargar configuración (.json) */
+  var CFG_APP='plano-edam';
+  function cfgPayload(){
+    return JSON.stringify({app:CFG_APP,version:1,savedAt:new Date().toISOString(),
+      state:{team:state.team||'',budget:state.budget||'',obs:state.obs||'',grid:state.grid,cones:state.cones,layers:state.layers,next:state.next,markers:state.markers}},null,2);
+  }
+  $('saveCfg').addEventListener('click',async function(){
+    var downloads=null;try{downloads=await downloadsP;}catch(e){}
+    if(!downloads){toast('La descarga no está disponible en esta vista');return;}
+    var d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'_'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+    try{await downloads.save({filename:'EDAM_config_'+slug(state.team)+'_'+stamp+'.json',data:new Blob([cfgPayload()],{type:'application/json'})});toast('Configuración guardada');}
+    catch(err){var c=err&&err.code;toast(c==='declined'?'Guardado cancelado':'No se pudo guardar el archivo');}
+  });
+  var pendingCfg=null;
+  function validCfg(o){
+    if(!o||o.app!==CFG_APP||!o.state||!Array.isArray(o.state.markers))return false;
+    return o.state.markers.every(function(m){return m&&byCode[m.code]&&isFinite(m.x)&&isFinite(m.y)&&isFinite(m.id);});
+  }
+  $('loadCfg').addEventListener('change',function(){
+    var f=this.files&&this.files[0];this.value='';if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var o=null;try{o=JSON.parse(rd.result);}catch(e){}
+      if(!validCfg(o)){toast('El archivo no es una configuración válida del Plano EDAM');return;}
+      pendingCfg=o.state;
+      $('loadConfirmText').textContent='¿Sustituir el trabajo actual por el del archivo ('+o.state.markers.length+' elementos'+(o.state.team?', '+o.state.team:'')+')?';
+      $('loadConfirm').hidden=false;$('loadNo').focus();
+    };
+    rd.onerror=function(){toast('No se pudo leer el archivo');};
+    rd.readAsText(f);
+  });
+  $('loadNo').addEventListener('click',function(){pendingCfg=null;$('loadConfirm').hidden=true;});
+  $('loadYes').addEventListener('click',function(){
+    var s=pendingCfg;if(!s)return;
+    state.team=String(s.team||'');state.budget=String(s.budget||'');state.obs=String(s.obs||'');
+    state.grid=s.grid!==false;state.cones=s.cones!==false;
+    state.layers={};LAYERS.forEach(function(L){state.layers[L.k]=!(s.layers&&s.layers[L.k]===false);});
+    state.markers=s.markers.map(function(m){var o={};for(var k in m)o[k]=m[k];return o;});
+    var maxId=state.markers.reduce(function(a,m){return Math.max(a,Number(m.id)||0);},0);
+    state.next=Math.max(Number(s.next)||0,maxId+1);
+    state.markers.forEach(function(m){if(m.code==='DP'&&(m.x2==null||m.y2==null)){m.x2=Math.min(m.x+160,1150);m.y2=m.y;}});
+    selected=null;pendingCfg=null;$('loadConfirm').hidden=true;
+    $('team').value=state.team;$('budget').value=state.budget;$('obs').value=state.obs;fitObs();
+    syncToggles();renderLayers();renderAll();
+    toast('Configuración cargada: '+state.markers.length+' elementos');
+  });
 
   /* Inicio */
   var narrow=window.matchMedia('(max-width:700px)').matches;
