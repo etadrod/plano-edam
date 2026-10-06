@@ -517,10 +517,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   var ZOOMS=[1,1.5,2,2.5,3,4];
 
   function defaultState(){
-    return {team:'',grid:true,cones:true,next:3,markers:[
-      {id:1,code:'LA',x:186,y:186,rot:0,note:'Ejemplo: lector en la esclusa peatonal',example:true},
-      {id:2,code:'CF',x:214,y:158,rot:200,note:'Ejemplo: cámara orientada al acceso principal',example:true}
-    ]};
+    return {team:'',grid:true,cones:true,next:1,markers:[]};
   }
   function load(){
     try{var raw=localStorage.getItem(KEY);if(raw){var s=JSON.parse(raw);if(s&&Array.isArray(s.markers)){return s;}}}catch(e){}
@@ -529,6 +526,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
   state=load();
   if(state.grid===undefined)state.grid=true;
+  state.markers=state.markers.filter(function(m){return !m.example;});
   if(!state.layers||typeof state.layers!=='object')state.layers={};
   LAYERS.forEach(function(L){if(state.layers[L.k]===undefined)state.layers[L.k]=true;});
   function layerOn(code){return state.layers[LAYER_OF[code]]!==false;}
