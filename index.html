@@ -635,7 +635,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 
   <section class="card teacher" id="teacherPanel" hidden aria-labelledby="tpTitle">
     <h2 id="tpTitle">Panel docente</h2>
-    <p class="empty" style="margin:0">Los cambios se guardan en este navegador y se aplican al momento. Para que los alumnos trabajen con ellos, descarga el paquete docente y compártelo (por ejemplo, en el aula virtual): cada alumno lo carga al entrar en la app.</p>
+    <p class="empty" style="margin:0">Los cambios (elementos, precios y plano seleccionado) se guardan solo en este navegador. Para que lleguen al alumnado, pulsa <b>Generar enlace para el alumnado</b> y comparte ese enlace (por ejemplo, en el aula virtual): al abrirlo, la app se configura sola con tu plano y tus precios. Vuelve a generarlo cada vez que cambies algo. También puedes descargar el paquete (.json) para que lo carguen a mano.</p>
     <div class="tp-grid">
       <div class="tp-field"><label for="packName">Nombre del paquete</label><input class="tp-in" type="text" id="packName" autocomplete="off"></div>
       <button class="btn primary" type="button" id="packSave">Descargar paquete docente</button>
@@ -643,6 +643,11 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       <input type="file" id="packLoad" class="sr-file" accept=".json,application/json">
       <button class="btn danger" type="button" id="packReset">Restaurar valores por defecto</button>
     </div>
+    <div class="tp-grid" style="grid-template-columns:minmax(0,1fr) auto">
+      <div class="tp-field"><label for="packLinkOut">Enlace para el alumnado</label><input class="tp-in" type="text" id="packLinkOut" readonly placeholder="Pulsa «Generar enlace» para crearlo"></div>
+      <button class="btn primary" type="button" id="packLink">Generar enlace para el alumnado</button>
+    </div>
+    <p class="empty" id="packLinkInfo" style="margin:0;font-size:13px" aria-live="polite"></p>
     <div class="confirm" id="packResetConfirm" hidden>
       <span>¿Restaurar los elementos, precios y planos originales? Se perderán tus cambios no descargados.</span>
       <button class="btn small danger" type="button" id="packResetYes">Restaurar</button>
@@ -2255,7 +2260,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     if(!ed.shapes.length){toast('El plano está vacío. Dibuja al menos una forma.');return;}
     var data={name:name,shapes:clone(ed.shapes),widthM:wm,pxPerM:1120/wm,x:30,y:30,w:1120,h:800};
     var ex=ed.mapId&&pack.maps.filter(function(x){return x.id===ed.mapId;})[0],backup=ex?clone(ex):null,isNew=!ex;
-    if(ex){for(var k in data)ex[k]=data[k];delete ex.img;}
+    if(ex){for(var k in data)ex[k]=data[k];delete ex.img;ex.edited=1;}
     else{ex=data;ex.id='m'+Date.now();pack.maps.push(ex);ed.mapId=ex.id;}
     var prevActive=pack.activeMap;pack.activeMap=ex.id;
     if(!savePack()){if(isNew){pack.maps.pop();ed.mapId=null;}else{for(var k2 in ex)delete ex[k2];for(var k3 in backup)ex[k3]=backup[k3];}pack.activeMap=prevActive;return;}
@@ -2269,6 +2274,47 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     edOpen({id:null,name:p.id==='blank'?'':p.name,widthM:p.widthM,shapes:p.shapes});
   });
 
+
+  /* Enlace para el alumnado: el paquete viaja comprimido en la dirección (#pack=…) */
+  var APP_URL='https://plano-edam.onrender.com/';
+  function b64u(bytes){var bin='';for(var i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+  function unb64u(t){t=t.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';var bin=atob(t),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+  async function zip(str){var cs=new CompressionStream('deflate-raw');var st=new Blob([str]).stream().pipeThrough(cs);return new Uint8Array(await new Response(st).arrayBuffer());}
+  async function unzip(bytes){var ds=new DecompressionStream('deflate-raw');var st=new Blob([bytes]).stream().pipeThrough(ds);return await new Response(st).text();}
+  function linkBase(){var inFrame=false;try{inFrame=window.top!==window;}catch(e){inFrame=true;}
+    if(!inFrame&&/^https?:$/.test(location.protocol))return location.origin+location.pathname;return APP_URL;}
+  $('packLink').addEventListener('click',async function(){
+    var m=currentMap();
+    if(m.img){$('packLinkInfo').textContent='El plano activo es una imagen y no cabe en un enlace. Para ese plano descarga el paquete (.json) y compártelo.';toast('Plano de imagen: comparte el paquete .json');return;}
+    if(typeof CompressionStream==='undefined'){toast('Este navegador no permite generar el enlace. Usa Chrome, Edge, Firefox o Safari actualizados.');return;}
+    var mo=m.blank?null:(m.builtin||m.preset)&&!m.edited?{ref:m.id}:{id:m.id,name:m.name,shapes:m.shapes,widthM:m.widthM};
+    var o={v:1,n:pack.name,c:pack.catalog.map(function(d){return [d.code,d.name,d.cat,d.layer,d.price,d.beh||'none'];}),m:mo};
+    try{
+      var url=linkBase()+'#pack='+b64u(await zip(JSON.stringify(o)));
+      $('packLinkOut').value=url;$('packLinkOut').select();
+      var copied=false;try{if(navigator.clipboard){await navigator.clipboard.writeText(url);copied=true;}}catch(e){}
+      $('packLinkInfo').textContent='Enlace generado con el plano «'+m.name+'» y '+pack.catalog.length+' elementos ('+url.length+' caracteres).'+(copied?' Copiado al portapapeles.':' Cópialo del cuadro de arriba.')+' Si cambias algo, genera uno nuevo.';
+      toast(copied?'Enlace copiado al portapapeles':'Enlace generado: cópialo del cuadro');
+    }catch(e){toast('No se pudo generar el enlace');}
+  });
+  async function readLinkPack(){
+    var h=location.hash||'';if(h.indexOf('#pack=')!==0)return;
+    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+    if(typeof DecompressionStream==='undefined'){toast('Este navegador no puede abrir el enlace del docente. Pide el paquete .json.');return;}
+    try{
+      var o=JSON.parse(await unzip(unb64u(h.slice(6))));
+      var cat=o.c.map(function(a){return {code:a[0],name:a[1],cat:a[2],layer:a[3],price:a[4],beh:a[5]};});
+      var maps=defaultMaps(),active='';
+      if(o.m&&o.m.ref){if(maps.some(function(x){return x.id===o.m.ref;}))active=o.m.ref;}
+      else if(o.m&&Array.isArray(o.m.shapes)){var nm={id:o.m.id||('m'+Date.now()),name:String(o.m.name||'Plano del docente'),shapes:o.m.shapes,widthM:Number(o.m.widthM)||280,x:30,y:30,w:1120,h:800};nm.pxPerM=1120/nm.widthM;
+        maps=maps.filter(function(x){return x.id!==nm.id;});maps.push(nm);active=nm.id;}
+      var np={name:String(o.n||'Paquete docente'),catalog:cat,maps:maps,activeMap:active,presetsV:1,updatedAt:new Date().toISOString()};
+      if(!validPack(np)){toast('El enlace del docente no es válido');return;}
+      pack=np;packVolatile=false;savePack();var removed=applyPack();
+      toast('Configuración del docente cargada: plano «'+currentMap().name+'»'+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
+    }catch(e){toast('No se pudo leer el enlace del docente');}
+  }
+
   /* Inicio */
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){try{applyMap(currentMap());renderMap();if(ed.open)edRender();}catch(e){}});
   var narrow=window.matchMedia('(max-width:700px)').matches;
@@ -2276,6 +2322,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   applyMap(currentMap());
   renderLayers();renderStatus();renderAll();
   showGate();
+  readLinkPack();
+  window.addEventListener('hashchange',readLinkPack);
   if(window.ResizeObserver){new ResizeObserver(function(){renderMap();}).observe(mapInner);}
   else window.addEventListener('resize',renderMap);
 })();
