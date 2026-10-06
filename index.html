@@ -226,9 +226,73 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   .print-only{display:block;white-space:pre-wrap;font-family:var(--font-mono);font-size:10px;line-height:1.45;break-before:page;page-break-before:always}
   @page{size:A4 landscape;margin:12mm}
 }
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));overflow:auto}
+.gate-card{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:16px}
+.gate-card h2{margin:0;font-size:24px;line-height:1.2;text-wrap:balance}
+.gate-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:480px){.gate-opts{grid-template-columns:minmax(0,1fr)}}
+.gate-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:96px;text-align:left;font:inherit;cursor:pointer}
+.gate-btn:hover{border-color:var(--accent)}
+.gate-btn b{font-size:18px}
+.gate-btn span{font-size:13px;color:var(--muted)}
+.gate-btn small{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.gate-pw{display:flex;flex-direction:column;gap:8px}
+.gate-err{color:var(--danger);font-size:13px;margin:0;min-height:1.2em}
+.gate-pack{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.file-btn{display:inline-flex;align-items:center;cursor:pointer;font-weight:500;color:var(--ink)}
+.sr-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.role-badge{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--accent-soft);color:var(--ink)}
+:root[data-role="teacher"] .role-badge{background:var(--accent);color:var(--accent-ink)}
+.teacher{grid-column:1/-1}
+.teacher h3{margin:6px 0 0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tp-table{overflow-x:auto;border:1px solid var(--line)}
+.tp-table table{border-collapse:collapse;width:100%;min-width:820px;font-size:13px}
+.tp-table th,.tp-table td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:middle}
+.tp-table th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--bg)}
+.tp-in{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);padding:6px 8px;min-height:38px;width:100%}
+.tp-in.code{font-family:var(--font-mono);text-transform:uppercase;width:72px}
+.tp-in.price{width:110px;text-align:right;font-variant-numeric:tabular-nums}
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:end}
+.tp-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.map-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
+.map-list li{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 10px}
+.map-list li+li{border-top:1px solid var(--line)}
+.map-list label{display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0;font-weight:600;color:var(--ink);font-size:14px}
+.map-list input[type=radio]{width:20px;height:20px;accent-color:var(--accent)}
+.map-meta{font-size:12px;color:var(--muted)}
+.toast-float{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--ink);color:var(--bg);padding:10px 16px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast-float:empty{display:none}
 .foot{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
+
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gate-card">
+    <div class="eyebrow">Módulo 1679 · Vigilancia y protección</div>
+    <h2 id="gateTitle">Plano EDAM · ¿Cómo quieres entrar?</h2>
+    <div class="gate-opts">
+      <button class="gate-btn" type="button" id="gateStudent"><small>Acceso libre</small><b>Alumno</b><span>Realiza la actividad y genera tu informe.</span></button>
+      <button class="gate-btn" type="button" id="gateTeacher"><small>Con contraseña</small><b>Docente</b><span>Edita elementos, precios y planos.</span></button>
+    </div>
+    <form class="gate-pw" id="gatePwForm" hidden autocomplete="off">
+      <label for="gatePw">Contraseña docente</label>
+      <input type="password" id="gatePw" inputmode="numeric" autocomplete="off" style="font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:44px">
+      <p class="gate-err" id="gateErr" aria-live="polite"></p>
+      <div class="row">
+        <button class="btn primary" type="submit">Entrar como docente</button>
+        <button class="btn" type="button" id="gatePwCancel">Cancelar</button>
+      </div>
+    </form>
+    <div class="gate-pack">
+      <span>Paquete de actividad: <b id="gatePackName" style="color:var(--ink)">—</b></span>
+      <div class="row">
+        <label class="btn small file-btn" for="gatePackFile">Cargar paquete del docente (.json)</label>
+        <input type="file" id="gatePackFile" class="sr-file" accept=".json,application/json">
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-float" id="toastFloat" role="status" aria-live="polite"></div>
 
 <div class="app">
   <header>
@@ -242,6 +306,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         <label for="team">Equipo / alumno</label>
         <input type="text" id="team" placeholder="Ej.: Equipo 3" autocomplete="off">
       </div>
+      <span class="role-badge" id="roleBadge">Alumno</span>
+      <button class="btn" type="button" id="switchRole">Cambiar perfil</button>
       <button class="theme-btn" type="button" id="themeBtn" aria-label="Cambiar a tema oscuro"><svg id="themeIco" viewBox="0 0 24 24" aria-hidden="true"></svg><span id="themeTxt">Tema oscuro</span></button>
     </div>
   </header>
@@ -276,6 +342,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
             <pattern id="waves" width="24" height="14" patternUnits="userSpaceOnUse"><path class="m-wave" d="M0 10 Q6 4 12 10 T24 10"></path></pattern>
           </defs>
           <rect class="m-paper" x="0" y="0" width="1180" height="860"></rect>
+          <g id="baseDefault">
           <rect class="m-sea" x="30" y="720" width="1120" height="110"></rect>
           <rect x="30" y="720" width="1120" height="110" fill="url(#waves)"></rect>
           <rect class="m-coast" x="30" y="716" width="1120" height="4"></rect>
@@ -306,6 +373,11 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
             <rect x="0" y="0" width="200" height="8" class="m-inkline"></rect>
             <text class="m-sub" x="0" y="24">0</text><text class="m-sub" x="100" y="24" text-anchor="middle">25</text><text class="m-sub" x="200" y="24" text-anchor="end">50 m</text>
             <text class="m-sub" x="0" y="40">Escala orientativa</text>
+          </g>
+          </g>
+          <g id="baseCustom" style="display:none">
+            <image id="baseImage" x="30" y="30" width="1120" height="800" preserveAspectRatio="none"></image>
+            <rect id="baseFrame" class="m-inkline" x="30" y="30" width="1120" height="800" fill="none" stroke-width="1"></rect>
           </g>
           <g id="gridLayer"></g>
           <g id="conesLayer"></g>
@@ -448,6 +520,42 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     </div>
   </section>
 
+  <section class="card teacher" id="teacherPanel" hidden aria-labelledby="tpTitle">
+    <h2 id="tpTitle">Panel docente</h2>
+    <p class="empty" style="margin:0">Los cambios se guardan en este navegador y se aplican al momento. Para que los alumnos trabajen con ellos, descarga el paquete docente y compártelo (por ejemplo, en el aula virtual): cada alumno lo carga al entrar en la app.</p>
+    <div class="tp-grid">
+      <div class="tp-field"><label for="packName">Nombre del paquete</label><input class="tp-in" type="text" id="packName" autocomplete="off"></div>
+      <button class="btn primary" type="button" id="packSave">Descargar paquete docente</button>
+      <label class="btn file-btn" for="packLoad" style="justify-content:center">Cargar paquete</label>
+      <input type="file" id="packLoad" class="sr-file" accept=".json,application/json">
+      <button class="btn danger" type="button" id="packReset">Restaurar valores por defecto</button>
+    </div>
+    <div class="confirm" id="packResetConfirm" hidden>
+      <span>¿Restaurar los elementos, precios y planos originales? Se perderán tus cambios no descargados.</span>
+      <button class="btn small danger" type="button" id="packResetYes">Restaurar</button>
+      <button class="btn small" type="button" id="packResetNo">Cancelar</button>
+    </div>
+
+    <h3>Elementos de seguridad</h3>
+    <div class="tp-table">
+      <table>
+        <thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Tipo (símbolo)</th><th scope="col">Capa</th><th scope="col">Cobertura en el plano</th><th scope="col">Precio (€)</th><th scope="col"><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Acciones</span></th></tr></thead>
+        <tbody id="catBody"></tbody>
+      </table>
+    </div>
+    <div class="row"><button class="btn" type="button" id="catAdd">Añadir elemento</button><span class="empty" style="font-size:12px" id="catCount"></span></div>
+
+    <h3>Planos</h3>
+    <p class="empty" style="margin:0;font-size:13px">El plano marcado es el que verán los alumnos al cargar el paquete. Las zonas (A, B, C…) solo se detectan en el plano EDAM por defecto; en los planos añadidos se usan las coordenadas de la cuadrícula.</p>
+    <ul class="map-list" id="mapList"></ul>
+    <div class="tp-grid">
+      <div class="tp-field"><label for="mapName">Nombre del plano nuevo</label><input class="tp-in" type="text" id="mapName" placeholder="Ej.: Polígono industrial" autocomplete="off"></div>
+      <div class="tp-field"><label for="mapWidth">Ancho real que representa la imagen (m)</label><input class="tp-in" type="number" id="mapWidth" min="10" max="5000" step="1" value="280"></div>
+      <div class="tp-field"><label for="mapFile">Imagen del plano (PNG o JPG)</label><input class="tp-in" type="file" id="mapFile" accept="image/png,image/jpeg,image/webp"></div>
+      <button class="btn primary" type="button" id="mapAdd">Añadir plano</button>
+    </div>
+  </section>
+
   <p class="foot">Supuesto didáctico ficticio. No representa ninguna instalación real. Tu trabajo se guarda solo en este dispositivo y navegador.</p>
 </div>
 
@@ -457,34 +565,84 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 (function(){
   var W=1180,H=860,GX0=30,GY0=30,CW=1120/12,RH=100;
   var COLS='ABCDEFGHIJKL';
-  var ELEMENTS=[
-    {code:'BA',name:'Barrera vehicular',cat:'fis',price:3500},
-    {code:'BO',name:'Bolardos',cat:'fis',price:450},
-    {code:'TE',name:'Torno / esclusa',cat:'fis',price:6000},
-    {code:'CE',name:'Cerradura / control de llaves',cat:'fis',price:350},
-    {code:'IL',name:'Iluminación',cat:'fis',price:600,light:{r:20}},
-    {code:'SE',name:'Señalización',cat:'fis',price:60},
-    {code:'BY',name:'Boya',cat:'fis',price:400},
-    {code:'CF',name:'Cámara fija',cat:'ele',price:450,cone:{half:37.5,zoom:{wide:75,narrow:15},cls:'',label:'Orientación del campo de visión'},dist:{def:30,min:10,max:100,label:'Distancia de visión'}},
-    {code:'CP',name:'Cámara domo PTZ',cat:'ele',price:1800,ptz:true,dist:{def:30,min:10,max:150,label:'Radio de visión'}},
-    {code:'DP',name:'Barrera IR (emisor + receptor)',cat:'ele',price:900,pair:{def:40,min:5,max:200,label:'Distancia entre emisor y receptor'}},
-    {code:'DV',name:'Detector volumétrico',cat:'ele',price:120,cone:{half:45,cls:'det',label:'Orientación del ángulo de detección'},dist:{def:15,min:3,max:40,label:'Alcance de detección'}},
-    {code:'CM',name:'Contacto magnético',cat:'ele',price:40},
-    {code:'LA',name:'Lector de acceso',cat:'ele',price:650},
-    {code:'AD',name:'Arco detector',cat:'ele',price:4500},
-    {code:'SI',name:'Sirena / flash',cat:'ele',price:180},
-    {code:'PR',name:'Punto de ronda',cat:'ope',price:35}
-  ];
+  /* Comportamientos en el plano (coberturas) */
+  var BEH={
+    none:{t:'Sin cobertura',cfg:{}},
+    cone:{t:'Cámara · campo de visión',cfg:{cone:{half:37.5,zoom:{wide:75,narrow:15},cls:'',label:'Orientación del campo de visión'},dist:{def:30,min:10,max:100,label:'Distancia de visión'}}},
+    circle:{t:'Cámara domo · cobertura circular',cfg:{ptz:true,dist:{def:30,min:10,max:150,label:'Radio de visión'}}},
+    detect:{t:'Detector · ángulo de detección',cfg:{cone:{half:45,cls:'det',label:'Orientación del ángulo de detección'},dist:{def:15,min:3,max:40,label:'Alcance de detección'}}},
+    light:{t:'Iluminación · zona de luz 20 m',cfg:{light:{r:20}}},
+    pair:{t:'Barrera · emisor y receptor',cfg:{pair:{def:40,min:5,max:200,label:'Distancia entre emisor y receptor'}}},
+    chain:{t:'Línea entre elementos (boyas)',cfg:{chain:true}},
+    route:{t:'Itinerario de ronda',cfg:{route:true}}
+  };
   var LAYERS=[
-    {k:'acc',t:'Control de acceso',codes:['TE','BO','BA','CE','AD','LA']},
-    {k:'vid',t:'CCTV',codes:['CF','CP']},
-    {k:'det',t:'Detectores',codes:['CM','DV']},
-    {k:'per',t:'Perímetro',codes:['DP','BY','PR']},
-    {k:'sen',t:'Señalización',codes:['SE','IL','SI']}
+    {k:'acc',t:'Control de acceso',codes:[]},
+    {k:'vid',t:'CCTV',codes:[]},
+    {k:'det',t:'Detectores',codes:[]},
+    {k:'per',t:'Perímetro',codes:[]},
+    {k:'sen',t:'Señalización',codes:[]}
   ];
-  var LAYER_OF={};LAYERS.forEach(function(L){L.codes.forEach(function(c){LAYER_OF[c]=L.k;});});
+  var DEFAULT_CATALOG=[
+    {code:'TE',name:'Torno / esclusa',cat:'fis',layer:'acc',price:6000,beh:'none'},
+    {code:'BO',name:'Bolardos',cat:'fis',layer:'acc',price:450,beh:'none'},
+    {code:'BA',name:'Barrera vehicular',cat:'fis',layer:'acc',price:3500,beh:'none'},
+    {code:'CE',name:'Cerradura / control de llaves',cat:'fis',layer:'acc',price:350,beh:'none'},
+    {code:'AD',name:'Arco detector',cat:'ele',layer:'acc',price:4500,beh:'none'},
+    {code:'LA',name:'Lector de acceso',cat:'ele',layer:'acc',price:650,beh:'none'},
+    {code:'CF',name:'Cámara fija',cat:'ele',layer:'vid',price:450,beh:'cone'},
+    {code:'CP',name:'Cámara domo PTZ',cat:'ele',layer:'vid',price:1800,beh:'circle'},
+    {code:'CM',name:'Contacto magnético',cat:'ele',layer:'det',price:40,beh:'none'},
+    {code:'DV',name:'Detector volumétrico',cat:'ele',layer:'det',price:120,beh:'detect'},
+    {code:'DP',name:'Barrera IR (emisor + receptor)',cat:'ele',layer:'per',price:900,beh:'pair'},
+    {code:'BY',name:'Boya',cat:'fis',layer:'per',price:400,beh:'chain'},
+    {code:'PR',name:'Punto de ronda',cat:'ope',layer:'per',price:35,beh:'route'},
+    {code:'SE',name:'Señalización',cat:'fis',layer:'sen',price:60,beh:'none'},
+    {code:'IL',name:'Iluminación',cat:'fis',layer:'sen',price:600,beh:'light'},
+    {code:'SI',name:'Sirena / flash',cat:'ele',layer:'sen',price:180,beh:'none'}
+  ];
   var CAT_NAME={fis:'Físicos',ele:'Electrónicos',ope:'Operativa'};
-  var byCode={};ELEMENTS.forEach(function(e){byCode[e.code]=e;});
+  var CAT_LABEL={fis:'Físico (cuadrado)',ele:'Electrónico (círculo)',ope:'Operativa (discontinuo)'};
+  var ELEMENTS=[],byCode={},LAYER_OF={};
+  var PX_PER_M=4,isCustomMap=false;
+  function clone(o){return JSON.parse(JSON.stringify(o));}
+  function applyCatalog(catalog){
+    ELEMENTS.length=0;byCode={};LAYER_OF={};LAYERS.forEach(function(L){L.codes=[];});
+    catalog.forEach(function(d){
+      var e=clone((BEH[d.beh]||BEH.none).cfg);
+      e.code=d.code;e.name=d.name;e.cat=d.cat;e.price=Number(d.price)||0;e.layer=d.layer;e.beh=d.beh||'none';
+      ELEMENTS.push(e);byCode[e.code]=e;LAYER_OF[e.code]=d.layer;
+      var L=LAYERS.filter(function(x){return x.k===d.layer;})[0]||LAYERS[0];L.codes.push(e.code);
+    });
+  }
+  /* Paquete docente: catálogo + planos (se guarda en este navegador) */
+  var PACK_KEY='edam-pack-v1',PACK_APP='plano-edam-pack';
+  var DEFAULT_MAP={id:'edam',name:'EDAM · desaladora (por defecto)',builtin:true,pxPerM:4,widthM:280};
+  function defaultPack(){return {name:'EDAM · paquete por defecto',catalog:clone(DEFAULT_CATALOG),maps:[clone(DEFAULT_MAP)],activeMap:'edam',updatedAt:null};}
+  function validPack(o){
+    if(!o||!Array.isArray(o.catalog)||!o.catalog.length||!Array.isArray(o.maps)||!o.maps.length)return false;
+    var seen={},lk={};LAYERS.forEach(function(L){lk[L.k]=1;});
+    var okCat=o.catalog.every(function(d){
+      if(!d||typeof d.code!=='string'||!/^[A-Z0-9]{1,4}$/.test(d.code)||seen[d.code])return false;seen[d.code]=1;
+      return typeof d.name==='string'&&CAT_NAME[d.cat]&&lk[d.layer]&&BEH[d.beh||'none']&&isFinite(Number(d.price));
+    });
+    var okMaps=o.maps.every(function(m){return m&&typeof m.id==='string'&&(m.builtin||(typeof m.img==='string'&&m.img.indexOf('data:image/')===0&&isFinite(m.pxPerM)&&m.pxPerM>0));});
+    return okCat&&okMaps;
+  }
+  function loadPack(){
+    try{var raw=localStorage.getItem(PACK_KEY);if(raw){var o=JSON.parse(raw);if(validPack(o))return o;}}catch(e){}
+    return defaultPack();
+  }
+  var pack=loadPack();
+  var packVolatile=false;
+  function savePack(){
+    if(packVolatile)return true;
+    pack.updatedAt=new Date().toISOString();
+    try{localStorage.setItem(PACK_KEY,JSON.stringify(pack));return true;}
+    catch(e){toast('No queda espacio en el navegador para guardar el paquete. Usa imágenes más pequeñas o elimina algún plano.');return false;}
+  }
+  function currentMap(){return pack.maps.filter(function(m){return m.id===pack.activeMap;})[0]||pack.maps[0];}
+  applyCatalog(pack.catalog);
   var EURF=new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:true});
   function eur(v){return EURF.format(v||0).replace(/\u00a0|\u202f/g,' ');}
   function totalCost(){return state.markers.reduce(function(a,m){var e=byCode[m.code];return a+(e?e.price:0);},0);}
@@ -531,7 +689,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   LAYERS.forEach(function(L){if(state.layers[L.k]===undefined)state.layers[L.k]=true;});
   function layerOn(code){return state.layers[LAYER_OF[code]]!==false;}
   if(state.cones===undefined)state.cones=true;
-  state.markers.forEach(function(m){if(m.code==='DP'&&(m.x2==null||m.y2==null)){m.x2=Math.min(m.x+160,1150);if(m.x2===m.x)m.x2=m.x-160;m.y2=m.y;}});
+  function fixPairs(){state.markers.forEach(function(m){var e=byCode[m.code];if(e&&e.pair&&(m.x2==null||m.y2==null)){m.x2=Math.min(m.x+160,1150);if(m.x2===m.x)m.x2=m.x-160;m.y2=m.y;}});}
+  fixPairs();
 
   function el(tag,attrs,text){var n=document.createElementNS(svgNS,tag);for(var k in attrs){n.setAttribute(k,attrs[k]);}if(text!=null)n.textContent=text;return n;}
 
@@ -597,6 +756,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     return COLS[c]+(r+1);
   }
   function zoneOf(x,y){
+    if(isCustomMap)return 'Plano: '+currentMap().name;
     for(var i=0;i<HIT_ZONES.length;i++){var z=HIT_ZONES[i];
       if(x>=z.x-6&&x<=z.x+z.w+6&&y>=z.y-6&&y<=z.y+z.h+6)return z.k+' · '+z.full;}
     var L=91.5,R=1108.5,T=151.5,B=648.5,tol=16;
@@ -612,8 +772,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   }
 
   /* Paleta */
-  (function drawPalette(){
-    var wrap=$('groups');
+  function drawPalette(){
+    var wrap=$('groups');wrap.innerHTML='';
     LAYERS.forEach(function(L){
       var g=document.createElement('div');g.className='group';
       var t=document.createElement('div');t.className='group-t';t.textContent=L.t;
@@ -626,9 +786,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         b.addEventListener('click',function(){setTool(tool===e.code?null:e.code);});
         chips.appendChild(b);
       });
+      if(!L.codes.length){var em=document.createElement('span');em.className='empty';em.style.fontSize='12px';em.textContent='Sin elementos en esta capa';chips.appendChild(em);}
       g.appendChild(chips);wrap.appendChild(g);
     });
-  })();
+    if(tool&&!byCode[tool])tool=null;
+    document.querySelectorAll('.chip').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.code===tool));});
+  }
+  drawPalette();
 
   function setTool(code){
     tool=code;
@@ -654,8 +818,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   /* Escala de los símbolos (tamaño constante en pantalla) */
   function markerScale(){var w=svg.getBoundingClientRect().width||W;var k=w<520?0.62:(w<800?0.8:1);return W/w*k;}
 
-  /* Escala del plano: 200 unidades = 50 m (barra de escala) */
-  var PX_PER_M=4;
+  /* Escala del plano: PX_PER_M depende del plano activo (EDAM: 200 unidades = 50 m) */
   function distOf(m,e){var d=e.dist;if(!d)return 0;var v=Number(m.dist);return isFinite(v)&&v>0?clamp(v,d.min,d.max):d.def;}
   function pairLen(m){return Math.round(Math.hypot((m.x2||m.x)-m.x,(m.y2||m.y)-m.y)/PX_PER_M);}
   function setPairLen(m,e,v){
@@ -712,17 +875,17 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         }
       }
       if(e.light&&(state.cones||selected===m.id))cl.appendChild(el('circle',{cx:m.x,cy:m.y,r:e.light.r*PX_PER_M,'class':'m-light'}));
-      if(e.code==='PR')pts.push(m.x+','+m.y);
-      if(e.code==='BY')bys.push(m.x+','+m.y);
+      if(e.route)pts.push(m.x+','+m.y);
+      if(e.chain)bys.push(m.x+','+m.y);
       if(e.pair){
         cl.appendChild(el('line',{x1:m.x,y1:m.y,x2:m.x2,y2:m.y2,'class':'m-ir'}));
         var gb=el('g',{'class':'mk'+(selected===m.id?' sel':''),transform:'translate('+m.x2+' '+m.y2+') scale('+s.toFixed(3)+')','data-id':m.id,'data-end':'b'});
         if(selected===m.id)gb.appendChild(el('circle',{r:23,'class':'mk-ring'}));
         gb.appendChild(el('circle',{r:15,'class':'mk-shape ir'}));
-        gb.appendChild(el('text',{y:4,'text-anchor':'middle','class':'mk-t'},'DP'));
+        gb.appendChild(el('text',{y:4,'text-anchor':'middle','class':'mk-t'},e.code));
         gb.appendChild(el('text',{x:17,y:-13,'class':'mk-n'},m.id+'R'));
         gb.appendChild(el('circle',{r:24,'class':'mk-hit'}));
-        gb.appendChild(el('title',{},'N.º '+m.id+' · Receptor IR · '+coordOf(m.x2,m.y2)));
+        gb.appendChild(el('title',{},'N.º '+m.id+' · Receptor · '+coordOf(m.x2,m.y2)));
         ml.appendChild(gb);
       }
       var g=el('g',{'class':'mk'+(selected===m.id?' sel':''),transform:'translate('+m.x+' '+m.y+') scale('+s.toFixed(3)+')','data-id':m.id});
@@ -876,7 +1039,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       var m={id:state.next++,code:tool,x:Math.round(p.x),y:Math.round(p.y),rot:0,note:''};
       if(e.pair){var dx=e.pair.def*PX_PER_M;m.x2=m.x+dx<=GX0+1120?m.x+dx:m.x-dx;m.y2=m.y;}
       state.markers.push(m);selected=m.id;renderAll();
-      toast(e.pair?'Colocada barrera IR n.º '+m.id+': arrastra el receptor (R) hasta enfrentarlo':'Colocado n.º '+m.id+': '+e.name+' en '+coordOf(m.x,m.y));
+      toast(e.pair?'Colocado n.º '+m.id+' ('+e.name+'): arrastra el receptor (R) hasta enfrentarlo':'Colocado n.º '+m.id+': '+e.name+' en '+coordOf(m.x,m.y));
     }else if(selected!=null){selected=null;renderMap();renderInspector();renderInventory();}
   });
 
@@ -955,7 +1118,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       b.innerHTML='<span class="box">'+CHECK+'</span><span></span><span class="cnt">0</span>';
       b.children[1].textContent=L.t;
       b.addEventListener('click',function(){
-        state.layers[L.k]=!layerOn(L.codes[0]);
+        state.layers[L.k]=state.layers[L.k]===false;
         var m=find(selected);if(m&&!layerOn(m.code))selected=null;
         renderLayers();renderAll();
         toast((state.layers[L.k]?'Capa visible: ':'Capa oculta: ')+L.t);
@@ -1091,7 +1254,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         doc.text('Supuesto didáctico ficticio. No representa ninguna instalación real.',12,203);
         doc.text('Página '+i+' de '+n,285,203,{align:'right'});}
     }
-    header('Plano de implantación de medidas de seguridad');
+    header('Plano de implantación de medidas de seguridad'+(isCustomMap?' · '+currentMap().name:''));
     var mw=226,mh=mw*860/1180;
     doc.addImage(img,'JPEG',12,30,mw,mh);
     doc.setDrawColor(163,173,178);doc.rect(12,30,mw,mh);
@@ -1113,7 +1276,11 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('SIMBOLOGÍA',lx,ly);
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);
     var yy=ly+5;
-    ELEMENTS.forEach(function(e){
+    var usedCodes={};state.markers.forEach(function(m){usedCodes[m.code]=1;});
+    var legendEls=ELEMENTS.filter(function(e){return usedCodes[e.code];});
+    if(!legendEls.length){doc.setTextColor(85,97,106);doc.text('Sin elementos colocados.',lx,yy);yy+=5;}
+    legendEls.forEach(function(e){
+      if(yy>176)return;
       doc.setDrawColor(28,36,39);doc.setLineWidth(0.3);
       if(e.cat==='ele')doc.circle(lx+2.2,yy-1.2,2,'S');
       else{if(e.cat==='ope')doc.setLineDashPattern([0.8,0.6],0);doc.rect(lx+0.2,yy-3,4,3.6,'S');doc.setLineDashPattern([],0);}
@@ -1122,7 +1289,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       yy+=5;
     });
     yy+=2;doc.setFontSize(7);doc.setTextColor(85,97,106);
-    doc.text(doc.splitTextToSize('Campos de cámaras (azul), detección (ámbar), iluminación (amarillo, 20 m), haces IR (rojo, emisor E y receptor R) y línea de boyas (naranja, en orden de colocación). Número junto a cada símbolo = n.º del inventario.',42),lx,yy);
+    doc.text(doc.splitTextToSize('Coberturas: cámaras (azul), detección (ámbar), iluminación (amarillo), barreras (rojo, emisor E y receptor R) y líneas entre elementos (naranja). Número junto a cada símbolo = n.º del inventario.',42),lx,yy);
 
     LAYERS.forEach(function(L,idx){
       doc.addPage();
@@ -1140,7 +1307,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       doc.setFont('helvetica','normal');
       doc.text(pdfSafe((tot?Math.round(sub/tot*100):0)+' % de la inversión total'),x,y);y+=8;
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('SIMBOLOGÍA',x,y);y+=5;
-      L.codes.forEach(function(code){var e=byCode[code];
+      L.codes.forEach(function(code){var e=byCode[code];if(y>150)return;
         var n=lm.filter(function(m){return m.code===code;}).length;
         doc.setDrawColor(28,36,39);doc.setLineWidth(0.3);
         if(e.cat==='ele')doc.circle(x+2.2,y-1.2,2,'S');
@@ -1313,12 +1480,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     }finally{exporting=false;btn.disabled=false;btn.textContent='Exportar PDF';}
   });
 
-  var toastT;function toast(msg){var t=$('toast');t.textContent=msg;clearTimeout(toastT);toastT=setTimeout(function(){t.textContent='';},3500);}
+  var toastT;function toast(msg){var t=$('toast'),f=$('toastFloat');if(t)t.textContent=msg;if(f)f.textContent=msg;clearTimeout(toastT);toastT=setTimeout(function(){if(t)t.textContent='';if(f)f.textContent='';},3800);}
 
   /* Guardar / cargar configuración (.json) */
   var CFG_APP='plano-edam';
   function cfgPayload(){
     return JSON.stringify({app:CFG_APP,version:1,savedAt:new Date().toISOString(),
+      pack:{name:pack.name,catalog:pack.catalog,maps:[currentMap()],activeMap:currentMap().id},
       state:{team:state.team||'',budget:state.budget||'',obs:state.obs||'',grid:state.grid,cones:state.cones,layers:state.layers,next:state.next,markers:state.markers}},null,2);
   }
   $('saveCfg').addEventListener('click',async function(){
@@ -1328,10 +1496,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     try{await downloads.save({filename:'EDAM_config_'+slug(state.team)+'_'+stamp+'.json',data:new Blob([cfgPayload()],{type:'application/json'})});toast('Configuración guardada');}
     catch(err){var c=err&&err.code;toast(c==='declined'?'Guardado cancelado':'No se pudo guardar el archivo');}
   });
-  var pendingCfg=null;
+  var pendingCfg=null,pendingCfgPack=null;
   function validCfg(o){
     if(!o||o.app!==CFG_APP||!o.state||!Array.isArray(o.state.markers))return false;
-    return o.state.markers.every(function(m){return m&&byCode[m.code]&&isFinite(m.x)&&isFinite(m.y)&&isFinite(m.id);});
+    var codes={};
+    if(o.pack){if(!validPack(o.pack))return false;o.pack.catalog.forEach(function(d){codes[d.code]=1;});}
+    else ELEMENTS.forEach(function(e){codes[e.code]=1;});
+    return o.state.markers.every(function(m){return m&&codes[m.code]&&isFinite(m.x)&&isFinite(m.y)&&isFinite(m.id);});
   }
   $('loadCfg').addEventListener('change',function(){
     var f=this.files&&this.files[0];this.value='';if(!f)return;
@@ -1339,7 +1510,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     rd.onload=function(){
       var o=null;try{o=JSON.parse(rd.result);}catch(e){}
       if(!validCfg(o)){toast('El archivo no es una configuración válida del Plano EDAM');return;}
-      pendingCfg=o.state;
+      pendingCfg=o.state;pendingCfgPack=o.pack||null;
       $('loadConfirmText').textContent='¿Sustituir el trabajo actual por el del archivo ('+o.state.markers.length+' elementos'+(o.state.team?', '+o.state.team:'')+')?';
       $('loadConfirm').hidden=false;$('loadNo').focus();
     };
@@ -1349,23 +1520,203 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   $('loadNo').addEventListener('click',function(){pendingCfg=null;$('loadConfirm').hidden=true;});
   $('loadYes').addEventListener('click',function(){
     var s=pendingCfg;if(!s)return;
+    if(pendingCfgPack){
+      if(role==='teacher'){packVolatile=true;toast('Se usa el paquete del archivo solo para revisar. Recarga la app para volver a tu paquete.');}
+      pack={name:pendingCfgPack.name||'Paquete del archivo',catalog:pendingCfgPack.catalog,maps:pendingCfgPack.maps,activeMap:pendingCfgPack.activeMap||pendingCfgPack.maps[0].id,updatedAt:null};
+      savePack();applyPack();
+    }
     state.team=String(s.team||'');state.budget=String(s.budget||'');state.obs=String(s.obs||'');
     state.grid=s.grid!==false;state.cones=s.cones!==false;
     state.layers={};LAYERS.forEach(function(L){state.layers[L.k]=!(s.layers&&s.layers[L.k]===false);});
     state.markers=s.markers.map(function(m){var o={};for(var k in m)o[k]=m[k];return o;});
     var maxId=state.markers.reduce(function(a,m){return Math.max(a,Number(m.id)||0);},0);
     state.next=Math.max(Number(s.next)||0,maxId+1);
-    state.markers.forEach(function(m){if(m.code==='DP'&&(m.x2==null||m.y2==null)){m.x2=Math.min(m.x+160,1150);m.y2=m.y;}});
+    fixPairs();
     selected=null;pendingCfg=null;$('loadConfirm').hidden=true;
     $('team').value=state.team;$('budget').value=state.budget;$('obs').value=state.obs;fitObs();
     syncToggles();renderLayers();renderAll();
     toast('Configuración cargada: '+state.markers.length+' elementos');
   });
 
+  /* Plano activo */
+  function applyMap(m){
+    isCustomMap=!m.builtin;PX_PER_M=m.pxPerM||4;
+    $('baseDefault').style.display=isCustomMap?'none':'';
+    $('baseCustom').style.display=isCustomMap?'':'none';
+    if(isCustomMap){
+      var im=$('baseImage');im.setAttribute('href',m.img);im.setAttributeNS('http://www.w3.org/1999/xlink','href',m.img);
+      ['x','y','w','h'].forEach(function(k){var v=m[k];im.setAttribute(k==='w'?'width':k==='h'?'height':k,v);$('baseFrame').setAttribute(k==='w'?'width':k==='h'?'height':k,v);});
+      svg.setAttribute('aria-label','Plano '+m.name+' con cuadrícula de referencia');
+    }else svg.setAttribute('aria-label','Plano ficticio de la desaladora con zonas A a I, vallado perimetral, carretera al norte y mar al sur');
+  }
+  function applyPack(){
+    applyCatalog(pack.catalog);applyMap(currentMap());
+    var before=state.markers.length;
+    state.markers=state.markers.filter(function(m){return byCode[m.code];});
+    fixPairs();
+    if(selected!=null&&!find(selected))selected=null;
+    drawPalette();renderLayers();renderAll();renderPackName();
+    if(role==='teacher')renderTeacher();
+    return before-state.markers.length;
+  }
+  function renderPackName(){$('gatePackName').textContent=pack.name+' · plano: '+currentMap().name;}
+
+  /* Acceso: alumno / docente */
+  var role=null,TEACHER_PW='0112';
+  function enterRole(r){
+    role=r;document.documentElement.setAttribute('data-role',r);
+    $('gate').hidden=true;$('teacherPanel').hidden=r!=='teacher';
+    $('roleBadge').textContent=r==='teacher'?'Docente':'Alumno';
+    if(r==='teacher')renderTeacher();
+    toast(r==='teacher'?'Has entrado como docente':'Has entrado como alumno');
+  }
+  function showGate(){
+    $('gate').hidden=false;$('gatePwForm').hidden=true;$('gateErr').textContent='';$('gatePw').value='';
+    renderPackName();setTimeout(function(){$('gateStudent').focus();},0);
+  }
+  $('gateStudent').addEventListener('click',function(){enterRole('student');});
+  $('gateTeacher').addEventListener('click',function(){$('gatePwForm').hidden=false;$('gateErr').textContent='';$('gatePw').focus();});
+  $('gatePwCancel').addEventListener('click',function(){$('gatePwForm').hidden=true;$('gatePw').value='';$('gateErr').textContent='';});
+  $('gatePwForm').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    if($('gatePw').value===TEACHER_PW){$('gatePw').value='';enterRole('teacher');}
+    else{$('gateErr').textContent='Contraseña incorrecta. Inténtalo de nuevo.';$('gatePw').select();}
+  });
+  $('switchRole').addEventListener('click',function(){$('teacherPanel').hidden=true;showGate();});
+
+  /* Cargar paquete (alumno o docente) */
+  function readJsonFile(file,cb){
+    var rd=new FileReader();
+    rd.onload=function(){var o=null;try{o=JSON.parse(rd.result);}catch(e){}cb(o);};
+    rd.onerror=function(){toast('No se pudo leer el archivo');};
+    rd.readAsText(file);
+  }
+  function loadPackObject(o){
+    if(!o||o.app!==PACK_APP||!validPack(o)){toast('El archivo no es un paquete docente válido del Plano EDAM');return false;}
+    pack={name:String(o.name||'Paquete docente'),catalog:o.catalog,maps:o.maps,activeMap:o.activeMap||o.maps[0].id,updatedAt:o.savedAt||null};
+    packVolatile=false;
+    if(!savePack())return false;
+    var removed=applyPack();
+    toast('Paquete cargado: '+pack.name+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
+    return true;
+  }
+  $('gatePackFile').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(f)readJsonFile(f,loadPackObject);});
+  $('packLoad').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(f)readJsonFile(f,loadPackObject);});
+
+  /* Panel docente */
+  function packChanged(msg){
+    savePack();applyCatalog(pack.catalog);
+    state.markers=state.markers.filter(function(m){return byCode[m.code];});fixPairs();
+    drawPalette();renderLayers();renderAll();renderPackName();
+    if(msg)toast(msg);
+  }
+  function renderTeacher(){
+    $('packName').value=pack.name;
+    var body=$('catBody');body.innerHTML='';
+    pack.catalog.forEach(function(d,i){
+      var tr=document.createElement('tr');
+      function cell(node){var td=document.createElement('td');td.appendChild(node);tr.appendChild(td);return node;}
+      function inp(type,cls,val,id,label){var x=document.createElement('input');x.type=type;x.className='tp-in '+cls;x.value=val;x.id=id;x.setAttribute('aria-label',label);return x;}
+      function sel(opts,val,id,label){var x=document.createElement('select');x.className='tp-in';x.id=id;x.setAttribute('aria-label',label);opts.forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];if(o[0]===val)op.selected=true;x.appendChild(op);});return x;}
+      var c=cell(inp('text','code',d.code,'cat-code-'+i,'Código del elemento '+(i+1)));c.maxLength=4;
+      var n=cell(inp('text','',d.name,'cat-name-'+i,'Nombre del elemento '+d.code));
+      var t=cell(sel([['fis',CAT_LABEL.fis],['ele',CAT_LABEL.ele],['ope',CAT_LABEL.ope]],d.cat,'cat-cat-'+i,'Tipo de '+d.code));
+      var l=cell(sel(LAYERS.map(function(L){return [L.k,L.t];}),d.layer,'cat-layer-'+i,'Capa de '+d.code));
+      var b=cell(sel(Object.keys(BEH).map(function(k){return [k,BEH[k].t];}),d.beh||'none','cat-beh-'+i,'Cobertura de '+d.code));
+      var pr=cell(inp('number','price',d.price,'cat-price-'+i,'Precio de '+d.code));pr.min='0';pr.step='1';
+      var del=document.createElement('button');del.type='button';del.className='btn small danger';del.textContent='Eliminar';del.setAttribute('aria-label','Eliminar '+d.code+' · '+d.name);
+      cell(del);
+      c.addEventListener('change',function(){
+        var v=c.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+        if(!v){c.value=d.code;toast('El código no puede quedar vacío');return;}
+        if(v!==d.code&&pack.catalog.some(function(x){return x.code===v;})){c.value=d.code;toast('Ya existe un elemento con el código '+v);return;}
+        var old=d.code;d.code=v;c.value=v;
+        state.markers.forEach(function(m){if(m.code===old)m.code=v;});
+        packChanged('Código actualizado: '+old+' → '+v);renderTeacher();
+      });
+      n.addEventListener('change',function(){var v=n.value.trim();if(!v){n.value=d.name;toast('El nombre no puede quedar vacío');return;}d.name=v;packChanged('Nombre actualizado');});
+      t.addEventListener('change',function(){d.cat=t.value;packChanged('Tipo actualizado');});
+      l.addEventListener('change',function(){d.layer=l.value;packChanged(d.code+' pasa a la capa '+l.options[l.selectedIndex].text);});
+      b.addEventListener('change',function(){d.beh=b.value;packChanged('Cobertura de '+d.code+' actualizada');});
+      pr.addEventListener('change',function(){var v=Number(pr.value);if(!isFinite(v)||v<0){pr.value=d.price;toast('Introduce un precio válido');return;}d.price=Math.round(v*100)/100;packChanged('Precio de '+d.code+': '+eur(d.price));});
+      del.addEventListener('click',function(){
+        var used=state.markers.filter(function(m){return m.code===d.code;}).length;
+        if(used){toast(d.code+' está colocado '+used+' vez/veces en el plano. Quítalo del plano antes de eliminarlo.');return;}
+        if(pack.catalog.length<=1){toast('Debe quedar al menos un elemento');return;}
+        pack.catalog.splice(i,1);packChanged('Elemento eliminado: '+d.code+' · '+d.name);renderTeacher();
+      });
+      body.appendChild(tr);
+    });
+    $('catCount').textContent=pack.catalog.length+' elementos en el catálogo';
+    var ml=$('mapList');ml.innerHTML='';
+    pack.maps.forEach(function(m,i){
+      var li=document.createElement('li');
+      var lab=document.createElement('label');var rb=document.createElement('input');rb.type='radio';rb.name='activeMap';rb.id='map-'+i;rb.checked=m.id===currentMap().id;
+      lab.setAttribute('for','map-'+i);lab.appendChild(rb);var sp=document.createElement('span');sp.textContent=m.name;lab.appendChild(sp);
+      var meta=document.createElement('span');meta.className='map-meta';meta.textContent=m.builtin?'Plano por defecto · 280 m de ancho':'Imagen · '+Math.round(m.widthM)+' m de ancho';
+      li.appendChild(lab);li.appendChild(meta);
+      rb.addEventListener('change',function(){if(rb.checked){pack.activeMap=m.id;savePack();applyMap(m);renderAll();renderPackName();toast('Plano activo: '+m.name+(state.markers.length?'. Revisa la posición de los elementos ya colocados.':''));}});
+      if(!m.builtin){
+        var del=document.createElement('button');del.type='button';del.className='btn small danger';del.textContent='Eliminar';del.setAttribute('aria-label','Eliminar plano '+m.name);
+        del.addEventListener('click',function(){
+          pack.maps.splice(i,1);if(pack.activeMap===m.id)pack.activeMap=pack.maps[0].id;
+          savePack();applyMap(currentMap());renderAll();renderPackName();renderTeacher();toast('Plano eliminado: '+m.name);
+        });
+        li.appendChild(del);
+      }
+      ml.appendChild(li);
+    });
+  }
+  $('packName').addEventListener('change',function(){var v=this.value.trim();if(!v){this.value=pack.name;return;}pack.name=v;savePack();renderPackName();toast('Nombre del paquete actualizado');});
+  $('catAdd').addEventListener('click',function(){
+    var n=1,code;do{code='N'+n;n++;}while(pack.catalog.some(function(x){return x.code===code;}));
+    pack.catalog.push({code:code,name:'Nuevo elemento',cat:'fis',layer:'acc',price:0,beh:'none'});
+    packChanged('Elemento añadido: '+code+'. Edita su código, nombre, capa y precio.');renderTeacher();
+    var ci=$('cat-code-'+(pack.catalog.length-1));if(ci){ci.focus();ci.select();}
+  });
+  $('packSave').addEventListener('click',async function(){
+    var downloads=null;try{downloads=await downloadsP;}catch(e){}
+    if(!downloads){toast('La descarga no está disponible en esta vista');return;}
+    var d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+    var data=JSON.stringify({app:PACK_APP,version:1,savedAt:new Date().toISOString(),name:pack.name,catalog:pack.catalog,maps:pack.maps,activeMap:currentMap().id},null,1);
+    try{await downloads.save({filename:'EDAM_paquete_'+slug(pack.name)+'_'+stamp+'.json',data:new Blob([data],{type:'application/json'})});toast('Paquete docente descargado');}
+    catch(err){var c=err&&err.code;toast(c==='declined'?'Descarga cancelada':'No se pudo descargar el paquete');}
+  });
+  $('packReset').addEventListener('click',function(){$('packResetConfirm').hidden=false;$('packResetNo').focus();});
+  $('packResetNo').addEventListener('click',function(){$('packResetConfirm').hidden=true;});
+  $('packResetYes').addEventListener('click',function(){
+    $('packResetConfirm').hidden=true;pack=defaultPack();packVolatile=false;savePack();
+    var removed=applyPack();toast('Paquete restaurado'+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
+  });
+  $('mapAdd').addEventListener('click',function(){
+    var name=$('mapName').value.trim(),wm=Number($('mapWidth').value),f=$('mapFile').files&&$('mapFile').files[0];
+    if(!name){toast('Escribe un nombre para el plano');$('mapName').focus();return;}
+    if(!isFinite(wm)||wm<10){toast('Indica el ancho real del plano en metros (mínimo 10 m)');$('mapWidth').focus();return;}
+    if(!f){toast('Elige la imagen del plano');$('mapFile').focus();return;}
+    var url=URL.createObjectURL(f),img=new Image();
+    img.onload=function(){
+      var maxW=1800,sc=Math.min(1,maxW/img.naturalWidth),cw=Math.round(img.naturalWidth*sc),ch=Math.round(img.naturalHeight*sc);
+      var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;var cx=cv.getContext('2d');cx.fillStyle='#FFFFFF';cx.fillRect(0,0,cw,ch);cx.drawImage(img,0,0,cw,ch);
+      URL.revokeObjectURL(url);
+      var data;try{data=cv.toDataURL('image/jpeg',0.85);}catch(e){toast('No se pudo procesar la imagen');return;}
+      var fit=Math.min(1120/cw,800/ch),dw=cw*fit,dh=ch*fit;
+      var m={id:'m'+Date.now(),name:name,img:data,x:Math.round(30+(1120-dw)/2),y:Math.round(30+(800-dh)/2),w:Math.round(dw),h:Math.round(dh),widthM:wm,pxPerM:dw/wm};
+      pack.maps.push(m);pack.activeMap=m.id;
+      if(!savePack()){pack.maps.pop();pack.activeMap=pack.maps[0].id;return;}
+      applyMap(m);renderAll();renderPackName();renderTeacher();
+      $('mapName').value='';$('mapFile').value='';
+      toast('Plano añadido y activado: '+name);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);toast('La imagen no se pudo abrir. Usa PNG o JPG.');};
+    img.src=url;
+  });
+
   /* Inicio */
   var narrow=window.matchMedia('(max-width:700px)').matches;
   setZoom(1,false);
+  applyMap(currentMap());
   renderLayers();renderStatus();renderAll();
+  showGate();
   if(window.ResizeObserver){new ResizeObserver(function(){renderMap();}).observe(mapInner);}
   else window.addEventListener('resize',renderMap);
 })();
