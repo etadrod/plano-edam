@@ -25,6 +25,7 @@
   --danger:#A33A2C; --cone:rgba(31,95,139,0.16); --cone-line:rgba(31,95,139,0.55); --example:#8A5A00;
   --det:rgba(176,96,16,0.16); --det-line:rgba(150,80,10,0.7);
   --light:rgba(232,186,30,0.22); --light-line:rgba(160,115,0,0.6); --ir:#B8322A;
+  --terrain:#E9ECE4; --terr-ink:#5B6B55; --plot:#F6F7F5; --dotline:#7A8C9A;
   --font-body:'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
   --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
@@ -36,6 +37,7 @@
     --danger:#E07A6A; --cone:rgba(111,168,214,0.2); --cone-line:rgba(111,168,214,0.7); --example:#E3B45C;
     --det:rgba(227,160,80,0.2); --det-line:rgba(227,160,80,0.8);
     --light:rgba(245,205,80,0.2); --light-line:rgba(245,205,80,0.65); --ir:#EE7B6E;
+    --terrain:#1D2621; --terr-ink:#A9B9A0; --plot:#161E21; --dotline:#7D8F99;
     color-scheme:dark;
   }
 }
@@ -46,9 +48,11 @@
   --danger:#E07A6A; --cone:rgba(111,168,214,0.2); --cone-line:rgba(111,168,214,0.7); --example:#E3B45C;
   --det:rgba(227,160,80,0.2); --det-line:rgba(227,160,80,0.8);
   --light:rgba(245,205,80,0.2); --light-line:rgba(245,205,80,0.65); --ir:#EE7B6E;
+  --terrain:#1D2621; --terr-ink:#A9B9A0; --plot:#161E21; --dotline:#7D8F99;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:16px 32px}
 .app{max-width:1500px;margin:0 auto;display:grid;gap:16px}
 @media (min-width:900px){.side{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
@@ -262,6 +266,46 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .map-meta{font-size:12px;color:var(--muted)}
 .toast-float{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--ink);color:var(--bg);padding:10px 16px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .toast-float:empty{display:none}
+.m-terrain{fill:var(--terrain)}
+.m-terr{fill:var(--terr-ink)}
+.m-plot{fill:var(--plot);stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+.m-roadl{stroke:var(--road);stroke-width:40;fill:none}
+.m-pipel{stroke:var(--zone-line);stroke-width:8;fill:none}
+.m-dotl{stroke:var(--dotline);stroke-width:3;stroke-dasharray:2 6;fill:none}
+.m-coastl{stroke:var(--sea-ink);stroke-opacity:.55;stroke-width:4;fill:none}
+.m-hatchl{stroke:var(--terr-ink);stroke-opacity:.3;stroke-width:2}
+.ed{position:fixed;inset:0;z-index:65;background:var(--bg);overflow:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.ed-in{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.ed-top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;justify-content:space-between}
+.ed-top h2{margin:0;font-size:20px}
+.ed-top .tp-field{flex:1 1 200px;max-width:360px}
+.ed-top .tp-field.w{flex:0 1 150px}
+.ed-tools{display:flex;flex-wrap:wrap;gap:8px 18px;background:var(--surface);border:1px solid var(--line);padding:8px 10px}
+.ed-grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.ed-grp-t{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.ed-tool{min-height:40px;padding:6px 10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.ed-tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;flex:0 0 auto}
+.ed-tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ed-body{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1000px){.ed-body{grid-template-columns:minmax(0,1fr) 320px;align-items:start}}
+.ed-canvas{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ed-svg{border:1px solid var(--line);background:var(--surface);touch-action:none}
+.ed-svg.drawing{cursor:crosshair}
+.ed-sh{cursor:move}
+.ed-svg.drawing .ed-sh{cursor:crosshair}
+.ed-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke}
+.ed-selbox{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:6 4;pointer-events:none;vector-effect:non-scaling-stroke}
+.ed-h{fill:var(--accent);stroke:var(--surface);stroke-width:3;cursor:nwse-resize}
+.ed-tmp{opacity:.7;pointer-events:none}
+.ed-opts{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:13px}
+.ed-opts label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);font-weight:500}
+.ed-opts input[type=checkbox],.ed-props input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.ed-props{position:sticky;top:0}
+.ed-props .tp-field{gap:3px}
+.ed-props textarea{min-height:64px;font-family:var(--font-body);font-size:13px;background:var(--surface)}
+.ed-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ed-chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);font-weight:500}
+.ed-hint{font-size:13px;color:var(--muted);margin:0}
 .foot{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
@@ -289,6 +333,44 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         <label class="btn small file-btn" for="gatePackFile">Cargar paquete del docente (.json)</label>
         <input type="file" id="gatePackFile" class="sr-file" accept=".json,application/json">
       </div>
+    </div>
+  </div>
+</div>
+<div class="ed" id="mapEd" hidden role="dialog" aria-modal="true" aria-labelledby="edTitle">
+  <div class="ed-in">
+    <div class="ed-top">
+      <div><div class="eyebrow">Panel docente</div><h2 id="edTitle">Editor de planos</h2></div>
+      <div class="tp-field"><label for="edName">Nombre del plano</label><input class="tp-in" type="text" id="edName" autocomplete="off"></div>
+      <div class="tp-field w"><label for="edWidth">Ancho real (m)</label><input class="tp-in" type="number" id="edWidth" min="10" max="5000" step="1"></div>
+      <div class="row">
+        <button class="btn" type="button" id="edUndo">Deshacer</button>
+        <button class="btn primary" type="button" id="edSave">Guardar plano</button>
+        <button class="btn" type="button" id="edClose">Cerrar</button>
+      </div>
+    </div>
+    <div class="confirm" id="edCloseConfirm" hidden>
+      <span>Hay cambios sin guardar. ¿Cerrar el editor y perderlos?</span>
+      <button class="btn small danger" type="button" id="edCloseYes">Cerrar sin guardar</button>
+      <button class="btn small" type="button" id="edCloseNo">Seguir editando</button>
+    </div>
+    <div class="ed-tools" id="edTools" role="toolbar" aria-label="Caja de herramientas"></div>
+    <div class="ed-body">
+      <div class="ed-canvas">
+        <svg class="map ed-svg" id="edSvg" viewBox="0 0 1180 860" role="img" aria-label="Lienzo del editor de planos">
+          <rect class="m-paper" x="0" y="0" width="1180" height="860"></rect>
+          <g id="edShapes"></g>
+          <g id="edGridL" style="pointer-events:none"></g>
+          <rect class="m-inkline" x="30" y="30" width="1120" height="800" style="pointer-events:none;opacity:.35"></rect>
+          <g id="edTmp" class="ed-tmp"></g>
+          <g id="edSel"></g>
+        </svg>
+        <div class="ed-opts">
+          <label><input type="checkbox" id="edSnap" checked> Ajustar a saltos de 5 px</label>
+          <label><input type="checkbox" id="edGridT" checked> Mostrar cuadrícula</label>
+          <span class="ed-hint" id="edHint" aria-live="polite"></span>
+        </div>
+      </div>
+      <aside class="card ed-props" id="edProps" aria-label="Propiedades de la forma seleccionada"></aside>
     </div>
   </div>
 </div>
@@ -340,6 +422,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         <svg class="map" id="map" viewBox="0 0 1180 860" role="img" aria-label="Plano ficticio de la desaladora con zonas A a I, vallado perimetral, carretera al norte y mar al sur">
           <defs>
             <pattern id="waves" width="24" height="14" patternUnits="userSpaceOnUse"><path class="m-wave" d="M0 10 Q6 4 12 10 T24 10"></path></pattern>
+            <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="m-hatchl" x1="0" y1="0" x2="0" y2="10"></line></pattern>
           </defs>
           <rect class="m-paper" x="0" y="0" width="1180" height="860"></rect>
           <g id="baseDefault">
@@ -377,6 +460,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
           </g>
           <g id="baseCustom" style="display:none">
             <image id="baseImage" x="30" y="30" width="1120" height="800" preserveAspectRatio="none"></image>
+            <g id="baseShapes"></g>
             <rect id="baseFrame" class="m-inkline" x="30" y="30" width="1120" height="800" fill="none" stroke-width="1"></rect>
           </g>
           <g id="gridLayer"></g>
@@ -546,8 +630,15 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     <div class="row"><button class="btn" type="button" id="catAdd">Añadir elemento</button><span class="empty" style="font-size:12px" id="catCount"></span></div>
 
     <h3>Planos</h3>
-    <p class="empty" style="margin:0;font-size:13px">El plano marcado es el que verán los alumnos al cargar el paquete. Las zonas (A, B, C…) solo se detectan en el plano EDAM por defecto; en los planos añadidos se usan las coordenadas de la cuadrícula.</p>
+    <p class="empty" style="margin:0;font-size:13px">El plano marcado es el que verán los alumnos al cargar el paquete. Las zonas (A, B, C…) se detectan en el plano EDAM y en los planos hechos con el editor; en los planos añadidos como imagen se usan las coordenadas de la cuadrícula.</p>
     <ul class="map-list" id="mapList"></ul>
+    <h3>Crear o editar planos</h3>
+    <p class="empty" style="margin:0;font-size:13px">Dibuja tu propio plano con la caja de herramientas (edificios, vallado, viales, agua, textos, entradas…) o parte de una plantilla y modifícala. Las zonas con letra se reconocen después en el inventario del alumno.</p>
+    <div class="tp-grid">
+      <div class="tp-field"><label for="edTpl">Partir de</label><select class="tp-in" id="edTpl"></select></div>
+      <button class="btn primary" type="button" id="edNew">Abrir editor de planos</button>
+    </div>
+    <h3>Añadir plano desde una imagen</h3>
     <div class="tp-grid">
       <div class="tp-field"><label for="mapName">Nombre del plano nuevo</label><input class="tp-in" type="text" id="mapName" placeholder="Ej.: Polígono industrial" autocomplete="off"></div>
       <div class="tp-field"><label for="mapWidth">Ancho real que representa la imagen (m)</label><input class="tp-in" type="number" id="mapWidth" min="10" max="5000" step="1" value="280"></div>
@@ -626,7 +717,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       if(!d||typeof d.code!=='string'||!/^[A-Z0-9]{1,4}$/.test(d.code)||seen[d.code])return false;seen[d.code]=1;
       return typeof d.name==='string'&&CAT_NAME[d.cat]&&lk[d.layer]&&BEH[d.beh||'none']&&isFinite(Number(d.price));
     });
-    var okMaps=o.maps.every(function(m){return m&&typeof m.id==='string'&&(m.builtin||(typeof m.img==='string'&&m.img.indexOf('data:image/')===0&&isFinite(m.pxPerM)&&m.pxPerM>0));});
+    var okMaps=o.maps.every(function(m){return m&&typeof m.id==='string'&&(m.builtin||(isFinite(m.pxPerM)&&m.pxPerM>0&&((typeof m.img==='string'&&m.img.indexOf('data:image/')===0)||Array.isArray(m.shapes))));});
     return okCat&&okMaps;
   }
   function loadPack(){
@@ -756,7 +847,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     return COLS[c]+(r+1);
   }
   function zoneOf(x,y){
-    if(isCustomMap)return 'Plano: '+currentMap().name;
+    if(isCustomMap){var cm=currentMap();return (cm.shapes&&shapeZone(cm.shapes,x,y))||('Plano: '+cm.name);}
     for(var i=0;i<HIT_ZONES.length;i++){var z=HIT_ZONES[i];
       if(x>=z.x-6&&x<=z.x+z.w+6&&y>=z.y-6&&y<=z.y+z.h+6)return z.k+' · '+z.full;}
     var L=91.5,R=1108.5,T=151.5,B=648.5,tol=16;
@@ -1200,6 +1291,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     '.m-light{fill:rgba(232,186,30,0.22);stroke:rgba(160,115,0,0.6);stroke-width:1.5;stroke-dasharray:2 4}.m-ir{fill:none;stroke:#B8322A;stroke-width:3;stroke-dasharray:10 5}.m-axis{stroke:none}'+
     '.mk-shape{fill:#FFFFFF;stroke:#1C2427;stroke-width:2}.mk-shape.ir{stroke:#B8322A}.mk-shape.ope{stroke-dasharray:4 3}.mk-shape.example{stroke:#8A5A00}'+
     '.mk-t{fill:#1C2427;font-family:Courier,monospace;font-size:11px;font-weight:700}'+
+    '.m-terrain{fill:#E9ECE4}.m-terr{fill:#5B6B55}.m-plot{fill:#F6F7F5;stroke:#A3ADB2;stroke-width:1.5;stroke-dasharray:4 4}.m-roadl{stroke:#D2D7D6;stroke-width:40;fill:none}.m-pipel{stroke:#5A666C;stroke-width:8;fill:none}.m-dotl{stroke:#7A8C9A;stroke-width:3;stroke-dasharray:2 6;fill:none}.m-coastl{stroke:#2B5566;stroke-opacity:.55;stroke-width:4;fill:none}.m-hatchl{stroke:#5B6B55;stroke-opacity:.3;stroke-width:2}'+
     '.mk-n{fill:#1C2427;font-family:Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;paint-order:stroke;stroke:#FFFFFF;stroke-width:3px}';
 
   function mapImage(layerKey){
@@ -1543,7 +1635,11 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     isCustomMap=!m.builtin;PX_PER_M=m.pxPerM||4;
     $('baseDefault').style.display=isCustomMap?'none':'';
     $('baseCustom').style.display=isCustomMap?'':'none';
-    if(isCustomMap){
+    var shp=!!(isCustomMap&&m.shapes);
+    $('baseImage').style.display=shp?'none':'';$('baseFrame').style.display=shp?'none':'';
+    drawShapes($('baseShapes'),shp?m.shapes:[],PX_PER_M);
+    if(shp){svg.setAttribute('aria-label','Plano '+m.name+' con cuadrícula de referencia');}
+    else if(isCustomMap){
       var im=$('baseImage');im.setAttribute('href',m.img);im.setAttributeNS('http://www.w3.org/1999/xlink','href',m.img);
       ['x','y','w','h'].forEach(function(k){var v=m[k];im.setAttribute(k==='w'?'width':k==='h'?'height':k,v);$('baseFrame').setAttribute(k==='w'?'width':k==='h'?'height':k,v);});
       svg.setAttribute('aria-label','Plano '+m.name+' con cuadrícula de referencia');
@@ -1653,9 +1749,14 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       var li=document.createElement('li');
       var lab=document.createElement('label');var rb=document.createElement('input');rb.type='radio';rb.name='activeMap';rb.id='map-'+i;rb.checked=m.id===currentMap().id;
       lab.setAttribute('for','map-'+i);lab.appendChild(rb);var sp=document.createElement('span');sp.textContent=m.name;lab.appendChild(sp);
-      var meta=document.createElement('span');meta.className='map-meta';meta.textContent=m.builtin?'Plano por defecto · 280 m de ancho':'Imagen · '+Math.round(m.widthM)+' m de ancho';
+      var meta=document.createElement('span');meta.className='map-meta';meta.textContent=m.builtin?'Plano por defecto · 280 m de ancho':(m.shapes?'Editor':'Imagen')+' · '+Math.round(m.widthM)+' m de ancho';
       li.appendChild(lab);li.appendChild(meta);
       rb.addEventListener('change',function(){if(rb.checked){pack.activeMap=m.id;savePack();applyMap(m);renderAll();renderPackName();toast('Plano activo: '+m.name+(state.markers.length?'. Revisa la posición de los elementos ya colocados.':''));}});
+      if(m.shapes){
+        var edb=document.createElement('button');edb.type='button';edb.className='btn small';edb.textContent='Editar';edb.setAttribute('aria-label','Editar plano '+m.name);
+        edb.addEventListener('click',function(){edOpen({id:m.id,name:m.name,widthM:m.widthM,shapes:m.shapes});});
+        li.appendChild(edb);
+      }
       if(!m.builtin){
         var del=document.createElement('button');del.type='button';del.className='btn small danger';del.textContent='Eliminar';del.setAttribute('aria-label','Eliminar plano '+m.name);
         del.addEventListener('click',function(){
@@ -1709,6 +1810,321 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     };
     img.onerror=function(){URL.revokeObjectURL(url);toast('La imagen no se pudo abrir. Usa PNG o JPG.');};
     img.src=url;
+  });
+
+  /* ===== Formas de plano (planos hechos con el editor) ===== */
+  var MAP_PRESETS=[{"id":"blank","name":"Plano en blanco","widthM":280,"shapes":[{"t":"north","x":1080,"y":88},{"t":"scale","x":800,"y":96}]},{"id":"edam","name":"EDAM · desaladora (original)","widthM":280,"shapes":[{"t":"rect","x":30,"y":720,"w":1120,"h":110,"s":"sea"},{"t":"rect","x":30,"y":716,"w":1120,"h":4,"s":"coast"},{"t":"text","txt":"OCÉANO ATLÁNTICO","s":"seaT","x":60,"y":790},{"t":"text","txt":"Franja costera · dominio público marítimo-terrestre","s":"label","x":380,"y":696,"it":1},{"t":"rect","x":30,"y":34,"w":1120,"h":46,"s":"road"},{"t":"line","x1":30,"y1":34,"x2":1150,"y2":34,"s":"edge"},{"t":"line","x1":30,"y1":80,"x2":1150,"y2":80,"s":"edge"},{"t":"text","txt":"CARRETERA · VÍA PÚBLICA","s":"labelB","x":420,"y":63,"ls":1},{"t":"rect","x":160,"y":80,"w":40,"h":72,"s":"road"},{"t":"text","txt":"Vial de acceso","s":"label","x":214,"y":106},{"t":"text","txt":"Acceso principal","s":"labelB","x":214,"y":140},{"t":"rect","x":378,"y":80,"w":99,"h":86,"s":"road"},{"t":"text","txt":"Acceso de vehículos","s":"label","x":486,"y":106},{"t":"rect","x":91.5,"y":151.5,"w":1017,"h":497,"s":"fence"},{"t":"rect","x":154,"y":144,"w":52,"h":14,"s":"blank"},{"t":"rect","x":378,"y":144,"w":99,"h":22,"s":"road"},{"t":"rect","x":1102,"y":556,"w":14,"h":48,"s":"blank"},{"t":"text","txt":"SECTOR N","s":"sector","x":1000,"y":174},{"t":"text","txt":"SECTOR S","s":"sector","x":560,"y":640},{"t":"text","txt":"SECTOR O","s":"sector","x":112,"y":400,"rot":-90},{"t":"text","txt":"SECTOR E","s":"sector","x":1090,"y":260,"rot":90},{"t":"rect","x":208,"y":160,"w":76,"h":50,"s":"zone"},{"t":"badge","x":214,"y":166,"L":"A","sz":20},{"t":"text","txt":"Garita","s":"name","x":246,"y":202,"a":"middle","size":14},{"t":"zone","x":378,"y":166,"w":413,"h":118,"L":"B","light":1,"name":"Zona Parking","sub":"Contratas y visitas"},{"t":"zone","x":120,"y":306,"w":220,"h":140,"L":"C","name":"Administración","sub":"P. baja: oficinas\nP. 1: sala de control (SCADA)"},{"t":"zone","x":400,"y":320,"w":390,"h":240,"L":"D","name":"Nave de ósmosis inversa y bombeo","sub":"Membranas · bombas de alta presión\nPuertas: norte (personal) · sur (mantenimiento)"},{"t":"zone","x":836,"y":178,"w":150,"h":104,"L":"E","name":"Reactivos","sub":"Hipoclorito\ny otros químicos"},{"t":"zone","x":950,"y":360,"w":136,"h":140,"L":"F","name":"Subestación","sub":"Transformadores"},{"t":"zone","x":820,"y":560,"w":130,"h":60,"L":"H","name":"Captación","sub":"Bombeo de mar"},{"t":"rect","x":836,"y":282,"w":150,"h":30,"s":"dash"},{"t":"text","txt":"Muelle de descarga","s":"sub","x":911,"y":301,"a":"middle"},{"t":"circle","cx":178,"cy":548,"r":48,"s":"zone"},{"t":"circle","cx":288,"cy":548,"r":48,"s":"zone"},{"t":"badge","x":130,"y":606,"L":"G"},{"t":"text","txt":"Depósitos de agua producto","s":"name","x":164,"y":625,"size":15},{"t":"rect","x":881,"y":620,"w":8,"h":98,"s":"pipe"},{"t":"text","txt":"Toma de mar / emisario","s":"seaS","x":897,"y":742},{"t":"badge","x":1072,"y":562,"L":"I"},{"t":"text","txt":"Acceso secundario","s":"name","x":1098,"y":607,"a":"end","size":12},{"t":"text","txt":"Puerta de emergencia","s":"sub","x":1098,"y":623,"a":"end"},{"t":"entry","x":193,"y":297,"v":0,"txt":"Entrada"},{"t":"entry","x":554,"y":311,"v":0,"txt":"Entrada"},{"t":"entry","x":977,"y":196,"v":1,"txt":"Entrada"},{"t":"entry","x":986,"y":491,"v":0,"txt":"Entrada"},{"t":"text","txt":"Viales interiores","s":"label","x":520,"y":600,"it":1},{"t":"north","x":1080,"y":88},{"t":"scale","x":780,"y":96}]},{"id":"almacen-quimico","name":"Almacenamiento químico","widthM":280,"shapes":[{"t":"rect","x":30,"y":34,"w":1120,"h":46,"s":"road"},{"t":"line","x1":30,"y1":34,"x2":1150,"y2":34,"s":"edge"},{"t":"line","x1":30,"y1":80,"x2":1150,"y2":80,"s":"edge"},{"t":"text","txt":"CALLE PRINCIPAL · POLÍGONO INDUSTRIAL","s":"labelB","x":360,"y":62,"ls":1},{"t":"rect","x":30,"y":96,"w":44,"h":560,"s":"plot"},{"t":"text","txt":"PARCELA COLINDANTE · NAVE LOGÍSTICA","s":"label","x":52,"y":380,"rot":-90,"size":11},{"t":"rect","x":1126,"y":96,"w":24,"h":560,"s":"plot"},{"t":"text","txt":"PARCELA COLINDANTE","s":"label","x":1142,"y":380,"rot":90,"size":11},{"t":"rect","x":30,"y":672,"w":1120,"h":158,"s":"terrain"},{"t":"text","txt":"SOLAR SIN EDIFICAR","s":"terrT","x":60,"y":760},{"t":"text","txt":"Matorral bajo · sin cerramiento propio","s":"terrS","x":60,"y":784},{"t":"rect","x":560,"y":690,"w":590,"h":34,"s":"road"},{"t":"text","txt":"Camino de servicio (tierra) · uso público","s":"label","x":600,"y":712,"it":1},{"t":"rect","x":150,"y":80,"w":40,"h":76,"s":"road"},{"t":"text","txt":"Acceso peatonal","s":"label","x":198,"y":106},{"t":"rect","x":420,"y":80,"w":140,"h":86,"s":"road"},{"t":"text","txt":"Acceso de cisternas y camiones","s":"label","x":568,"y":106},{"t":"rect","x":91.5,"y":151.5,"w":1017,"h":497,"s":"fence"},{"t":"rect","x":144,"y":144,"w":52,"h":14,"s":"blank"},{"t":"rect","x":420,"y":144,"w":140,"h":22,"s":"road"},{"t":"rect","x":1060,"y":641,"w":48,"h":14,"s":"blank"},{"t":"rect","x":1060,"y":648,"w":48,"h":42,"s":"road"},{"t":"text","txt":"SECTOR N","s":"sector","x":980,"y":174},{"t":"text","txt":"SECTOR S","s":"sector","x":300,"y":640},{"t":"text","txt":"SECTOR O","s":"sector","x":112,"y":520,"rot":-90},{"t":"text","txt":"SECTOR E","s":"sector","x":1090,"y":300,"rot":90},{"t":"zone","x":200,"y":160,"w":100,"h":50,"L":"A","name":"Garita","ns":14,"sub":""},{"t":"zone","x":420,"y":166,"w":330,"h":100,"L":"B","light":1,"name":"Báscula y aparcamiento","sub":"Espera de cisternas · conductores externos"},{"t":"zone","x":120,"y":250,"w":230,"h":130,"L":"C","name":"Oficinas y laboratorio","sub":"P. baja: recepción y laboratorio\nP. 1: sala de control y CCTV"},{"t":"rect","x":400,"y":300,"w":380,"h":250,"s":"dash"},{"t":"badge","x":408,"y":308,"L":"D"},{"t":"text","txt":"Parque de tanques","s":"name","x":442,"y":327,"size":16},{"t":"text","txt":"Cubeto de retención","s":"sub","x":410,"y":352},{"t":"circle","cx":470,"cy":420,"r":44,"s":"zone"},{"t":"circle","cx":590,"cy":420,"r":44,"s":"zone"},{"t":"circle","cx":710,"cy":420,"r":44,"s":"zone"},{"t":"text","txt":"T-1","s":"sub","x":470,"y":425,"a":"middle"},{"t":"text","txt":"T-2","s":"sub","x":590,"y":425,"a":"middle"},{"t":"text","txt":"T-3","s":"sub","x":710,"y":425,"a":"middle"},{"t":"circle","cx":620,"cy":508,"r":30,"s":"zone"},{"t":"circle","cx":740,"cy":508,"r":30,"s":"zone"},{"t":"text","txt":"T-4","s":"sub","x":620,"y":513,"a":"middle"},{"t":"text","txt":"T-5","s":"sub","x":740,"y":513,"a":"middle"},{"t":"text","txt":"Ácidos · bases · disolventes","s":"sub","x":410,"y":540},{"t":"zone","x":820,"y":180,"w":240,"h":140,"L":"E","name":"Almacén de envasados","sub":"Bidones e IBC en estanterías\nPuerta seccional al muelle"},{"t":"rect","x":820,"y":320,"w":240,"h":30,"s":"dash"},{"t":"text","txt":"Muelle de carga","s":"sub","x":940,"y":339,"a":"middle"},{"t":"zone","x":820,"y":400,"w":210,"h":90,"L":"F","name":"Cargadero","sub":"Llenado de cisternas\nBrazos de carga · ducha emerg."},{"t":"zone","x":130,"y":440,"w":160,"h":110,"L":"G","name":"Inflamables","sub":"Almacén aislado\nSectorizado RF"},{"t":"circle","cx":770,"cy":598,"r":34,"s":"zone"},{"t":"badge","x":704,"y":574,"L":"H"},{"t":"text","txt":"Agua PCI","s":"sub","x":770,"y":602,"a":"middle"},{"t":"rect","x":812,"y":578,"w":54,"h":40,"s":"zoneL"},{"t":"text","txt":"Bombas","s":"sub","x":839,"y":602,"a":"middle"},{"t":"badge","x":1072,"y":600,"L":"I"},{"t":"text","txt":"Salida de emergencia","s":"name","x":1056,"y":612,"a":"end","size":12},{"t":"text","txt":"Hacia camino de servicio","s":"sub","x":1056,"y":628,"a":"end"},{"t":"entry","x":180,"y":241,"v":0,"txt":"Entrada"},{"t":"entry","x":556,"y":291,"v":0,"txt":"Acceso cubeto"},{"t":"entry","x":802,"y":214,"v":1,"txt":"Entrada"},{"t":"entry","x":176,"y":431,"v":0,"txt":"Entrada"},{"t":"text","txt":"Viales interiores · tránsito de cisternas","s":"label","x":330,"y":600,"it":1},{"t":"north","x":1080,"y":88},{"t":"scale","x":800,"y":96}]},{"id":"edam-costa-este","name":"EDAM costa este","widthM":280,"shapes":[{"t":"rect","x":34,"y":30,"w":46,"h":800,"s":"road"},{"t":"line","x1":34,"y1":30,"x2":34,"y2":830,"s":"edge"},{"t":"line","x1":80,"y1":30,"x2":80,"y2":830,"s":"edge"},{"t":"text","txt":"CARRETERA COMARCAL · VÍA PÚBLICA","s":"labelB","x":62,"y":430,"rot":-90,"ls":1},{"t":"rect","x":960,"y":30,"w":190,"h":800,"s":"sea"},{"t":"rect","x":956,"y":30,"w":4,"h":800,"s":"coast"},{"t":"text","txt":"OCÉANO ATLÁNTICO","s":"seaT","x":1075,"y":430,"rot":90},{"t":"text","txt":"Playa de callaos · dominio público marítimo-terrestre","s":"label","x":930,"y":260,"rot":90,"size":12,"it":1},{"t":"rect","x":80,"y":30,"w":876,"h":70,"s":"terrain"},{"t":"path","d":"M80 70 C 260 52, 420 88, 600 66 S 860 58, 956 72","cls":"dot","dx":0,"dy":0},{"t":"text","txt":"BARRANCO · CAUCE SECO","s":"terrB","x":120,"y":58,"ls":1},{"t":"rect","x":80,"y":200,"w":70,"h":40,"s":"road"},{"t":"text","txt":"Acceso principal","s":"labelB","x":156,"y":192},{"t":"rect","x":80,"y":620,"w":70,"h":60,"s":"road"},{"t":"text","txt":"Acceso de vehículos pesados","s":"label","x":156,"y":702},{"t":"rect","x":143.5,"y":121.5,"w":770,"h":638,"s":"fence"},{"t":"rect","x":136,"y":200,"w":14,"h":40,"s":"road"},{"t":"rect","x":136,"y":620,"w":14,"h":60,"s":"road"},{"t":"rect","x":906,"y":650,"w":14,"h":44,"s":"blank"},{"t":"text","txt":"SECTOR N","s":"sector","x":520,"y":144},{"t":"text","txt":"SECTOR S","s":"sector","x":520,"y":752},{"t":"text","txt":"SECTOR O","s":"sector","x":164,"y":420,"rot":-90},{"t":"text","txt":"SECTOR E","s":"sector","x":894,"y":300,"rot":90},{"t":"zone","x":185,"y":250,"w":100,"h":50,"L":"A","name":"Garita","ns":14,"sub":""},{"t":"zone","x":185,"y":320,"w":190,"h":120,"L":"B","light":1,"name":"Aparcamiento","sub":"Personal y visitas\n40 plazas"},{"t":"zone","x":400,"y":150,"w":240,"h":120,"L":"C","name":"Edificio de control","sub":"P. baja: oficinas y vestuarios\nP. 1: sala de control SCADA"},{"t":"zone","x":690,"y":150,"w":200,"h":150,"L":"D","name":"Pretratamiento","sub":"Filtros de arena\ny cartuchos"},{"t":"zone","x":400,"y":330,"w":330,"h":200,"L":"E","name":"Nave de ósmosis inversa","sub":"Bastidores de membranas\nBombas AP · recuperadores"},{"t":"zone","x":185,"y":470,"w":170,"h":120,"L":"F","name":"Reactivos","sub":"Hipoclorito · antiincrustante\nCubeto de retención"},{"t":"circle","cx":480,"cy":640,"r":52,"s":"zone"},{"t":"circle","cx":610,"cy":640,"r":52,"s":"zone"},{"t":"badge","x":400,"y":700,"L":"G"},{"t":"text","txt":"Depósitos de agua producto","s":"name","x":434,"y":719,"size":15},{"t":"zone","x":770,"y":360,"w":130,"h":120,"L":"H","name":"Captación","ns":15,"sub":"Bombeo de\nagua de mar"},{"t":"rect","x":900,"y":412,"w":60,"h":8,"s":"pipe"},{"t":"text","txt":"Toma","s":"label","x":948,"y":438,"a":"end","size":11},{"t":"zone","x":740,"y":560,"w":165,"h":110,"L":"I","name":"Subestación","ns":15,"sub":"Transformadores\nCentro de seccionamiento"},{"t":"rect","x":215,"y":612,"w":140,"h":30,"s":"dash"},{"t":"text","txt":"Muelle de descarga","s":"sub","x":285,"y":631,"a":"middle"},{"t":"rect","x":620,"y":776,"w":340,"h":8,"s":"pipe"},{"t":"text","txt":"Emisario de salmuera →","s":"label","x":640,"y":802,"size":11},{"t":"entry","x":470,"y":312,"v":0,"txt":"Entrada"},{"t":"entry","x":346,"y":494,"v":1,"txt":"Entrada"},{"t":"entry","x":722,"y":382,"v":1,"txt":"Entrada"},{"t":"entry","x":470,"y":262,"v":0,"txt":"Entrada"},{"t":"text","txt":"Viales interiores","s":"label","x":780,"y":720,"it":1},{"t":"text","txt":"Puerta playa","s":"label","x":926,"y":672,"rot":90,"size":11},{"t":"north","x":1000,"y":96},{"t":"scale","x":180,"y":786}]},{"id":"cpd-telecom","name":"Centro de datos y telecomunicaciones","widthM":280,"shapes":[{"t":"rect","x":30,"y":34,"w":1120,"h":46,"s":"road"},{"t":"line","x1":30,"y1":34,"x2":1150,"y2":34,"s":"edge"},{"t":"line","x1":30,"y1":80,"x2":1150,"y2":80,"s":"edge"},{"t":"text","txt":"AVENIDA · VÍA PÚBLICA","s":"labelB","x":470,"y":62,"ls":1},{"t":"rect","x":30,"y":690,"w":1120,"h":140,"s":"terrain"},{"t":"text","txt":"LADERA · TERRENO RÚSTICO","s":"terrT","x":60,"y":770},{"t":"text","txt":"Pendiente pronunciada · visibilidad sobre la parcela","s":"terrS","x":60,"y":794},{"t":"rect","x":30,"y":96,"w":44,"h":580,"s":"plot"},{"t":"text","txt":"PARQUE EMPRESARIAL","s":"label","x":52,"y":390,"rot":-90,"size":11},{"t":"rect","x":1106,"y":96,"w":44,"h":594,"s":"road"},{"t":"text","txt":"CALLE LATERAL","s":"labelB","x":1132,"y":400,"rot":90,"ls":1},{"t":"rect","x":230,"y":80,"w":40,"h":76,"s":"road"},{"t":"text","txt":"Acceso peatonal","s":"label","x":278,"y":106},{"t":"rect","x":620,"y":80,"w":110,"h":86,"s":"road"},{"t":"text","txt":"Acceso de vehículos","s":"label","x":738,"y":106},{"t":"rect","x":91.5,"y":151.5,"w":1007,"h":517,"s":"fence"},{"t":"rect","x":224,"y":144,"w":52,"h":14,"s":"blank"},{"t":"rect","x":620,"y":144,"w":110,"h":22,"s":"road"},{"t":"rect","x":1092,"y":560,"w":14,"h":60,"s":"road"},{"t":"text","txt":"SECTOR N","s":"sector","x":960,"y":174},{"t":"text","txt":"SECTOR S","s":"sector","x":560,"y":662},{"t":"text","txt":"SECTOR O","s":"sector","x":112,"y":420,"rot":-90},{"t":"text","txt":"SECTOR E","s":"sector","x":1080,"y":300,"rot":90},{"t":"zone","x":128,"y":160,"w":92,"h":50,"L":"A","name":"Garita","ns":13,"sub":""},{"t":"zone","x":620,"y":166,"w":260,"h":104,"L":"B","light":1,"name":"Aparcamiento","sub":"Personal autorizado\nVisitas: zona exterior"},{"t":"zone","x":120,"y":250,"w":250,"h":150,"L":"C","name":"Edificio de oficinas","sub":"P. baja: recepción y esclusa\nP. 1: NOC · centro de operaciones\nP. 2: dirección"},{"t":"zone","x":420,"y":310,"w":380,"h":230,"L":"D","name":"Edificio CPD","sub":"Salas técnicas 1 y 2 (servidores)\nSala de telecomunicaciones (meet-me)\nSin ventanas · acceso por esclusa"},{"t":"rect","x":800,"y":380,"w":22,"h":80,"s":"pipe"},{"t":"zone","x":850,"y":300,"w":216,"h":110,"L":"E","name":"Grupos electrógenos","ns":15,"sub":"4 grupos diésel\nCuadros de conmutación"},{"t":"zone","x":850,"y":450,"w":140,"h":90,"L":"F","name":"Gasóleo","ns":15,"sub":"Depósitos enterrados\nBoca de carga"},{"t":"zone","x":120,"y":450,"w":240,"h":110,"L":"G","name":"Centro de transformación","ns":14,"sub":"Acometida de MT\nCompañía eléctrica"},{"t":"circle","cx":960,"cy":225,"r":34,"s":"zone"},{"t":"path","d":"M948 245 L960 200 L972 245 M952 230 L968 230","cls":"ink","dx":0,"dy":0},{"t":"badge","x":1004,"y":190,"L":"H"},{"t":"text","txt":"Torre de telecom.","s":"sub","x":960,"y":282,"a":"middle"},{"t":"badge","x":1060,"y":570,"L":"I"},{"t":"text","txt":"Salida de emergencia","s":"name","x":1050,"y":612,"a":"end","size":12},{"t":"text","txt":"A calle lateral","s":"sub","x":1050,"y":628,"a":"end"},{"t":"rect","x":420,"y":540,"w":200,"h":30,"s":"dash"},{"t":"text","txt":"Muelle de carga de equipos","s":"sub","x":520,"y":559,"a":"middle"},{"t":"entry","x":200,"y":241,"v":0,"txt":"Entrada"},{"t":"entry","x":560,"y":301,"v":0,"txt":"Esclusa de entrada"},{"t":"entry","x":832,"y":320,"v":1,"txt":"Entrada"},{"t":"text","txt":"Viales interiores","s":"label","x":330,"y":620,"it":1},{"t":"north","x":1078,"y":96},{"t":"scale","x":866,"y":96}]}];
+  var RECT_ST={zone:'m-zone',zoneL:'m-zone light',dash:'m-dash',road:'m-road',sea:'m-sea',terrain:'m-terrain',plot:'m-plot',pipe:'m-pipe',blank:'m-paper',fence:'m-fence',coast:'m-coast'};
+  var RECT_LBL=[['zone','Edificio'],['zoneL','Edificio (tono claro)'],['dash','Zona discontinua (cubeto, muelle…)'],['road','Vial / calzada'],['sea','Agua / mar'],['terrain','Terreno / solar'],['plot','Parcela colindante'],['pipe','Tubería / conducción'],['fence','Vallado perimetral'],['coast','Línea de costa'],['blank','Borrador (tapa en blanco)']];
+  var CIRC_LBL=[['zone','Depósito / edificio'],['zoneL','Depósito (tono claro)'],['dash','Zona discontinua'],['sea','Agua'],['terrain','Terreno']];
+  var LINE_ST={fence:'m-fence',road:'m-roadl',pipe:'m-pipel',ink:'m-inkline',dot:'m-dotl',edge:'m-roadline',coast:'m-coastl'};
+  var LINE_LBL=[['fence','Vallado'],['road','Vial'],['pipe','Tubería / conducción'],['ink','Línea fina'],['dot','Línea de puntos (cauce, límite)'],['edge','Borde de vial'],['coast','Costa']];
+  var TEXT_ST={name:'m-name',sub:'m-sub',label:'m-label',labelB:'m-label b',sector:'m-sector',seaT:'m-sea-t',seaS:'m-sea-s',terrT:'m-sea-t m-terr',terrS:'m-sea-s m-terr',terrB:'m-label b m-terr'};
+  var TEXT_LBL=[['label','Etiqueta'],['labelB','Etiqueta destacada'],['name','Título de zona'],['sub','Texto secundario'],['sector','Sector (espaciado)'],['seaT','Rótulo de mar'],['seaS','Texto de mar'],['terrT','Rótulo de terreno'],['terrS','Texto de terreno'],['terrB','Etiqueta de terreno']];
+  function scaleStep(ppm){var st=[1,2,5,10,20,25,50,100,200,250,500,1000,2000],best=1;st.forEach(function(v){if(2*v*ppm<=260)best=v;});return best;}
+  function shapeG(s,ppm){
+    var g=el('g',{});function A(n){g.appendChild(n);return n;}
+    var a;
+    switch(s.t){
+      case 'rect':
+        A(el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,'class':RECT_ST[s.s]||'m-zone'}));
+        if(s.s==='sea')A(el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,fill:'url(#waves)'}));
+        if(s.s==='terrain')A(el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,fill:'url(#hatch)'}));
+        break;
+      case 'zone':
+        A(el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,'class':s.light?'m-zone light':'m-zone'}));
+        var nx=s.x+10;
+        if(s.L){A(el('rect',{x:s.x+8,y:s.y+8,width:26,height:26,'class':'m-badge'}));A(el('text',{x:s.x+21,y:s.y+26.5,'text-anchor':'middle','class':'m-badge-t'},s.L));nx=s.x+42;}
+        if(s.name){a={x:nx,y:s.y+27,'class':'m-name'};if(s.ns)a['font-size']=s.ns;A(el('text',a,s.name));}
+        String(s.sub||'').split('\n').forEach(function(t,k){if(t)A(el('text',{x:s.x+10,y:s.y+52+16*k,'class':'m-sub'},t));});
+        break;
+      case 'circle':
+        A(el('circle',{cx:s.cx,cy:s.cy,r:s.r,'class':RECT_ST[s.s]||'m-zone'}));
+        if(s.s==='sea')A(el('circle',{cx:s.cx,cy:s.cy,r:s.r,fill:'url(#waves)'}));
+        if(s.s==='terrain')A(el('circle',{cx:s.cx,cy:s.cy,r:s.r,fill:'url(#hatch)'}));
+        break;
+      case 'line':
+        a={x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2,'class':LINE_ST[s.s]||'m-inkline'};if(s.w)a['stroke-width']=s.w;else if(s.s==='ink')a['stroke-width']=2;
+        A(el('line',a));break;
+      case 'text':
+        a={'class':TEXT_ST[s.s]||'m-label'};
+        if(s.rot){a.transform='translate('+s.x+' '+s.y+') rotate('+s.rot+')';}else{a.x=s.x;a.y=s.y;}
+        a['text-anchor']=s.a||(s.rot?'middle':'start');
+        if(s.size)a['font-size']=s.size;if(s.it)a['font-style']='italic';if(s.ls)a['letter-spacing']=s.ls;
+        A(el('text',a,s.txt||' '));break;
+      case 'badge':
+        var z=s.sz||26;A(el('rect',{x:s.x,y:s.y,width:z,height:z,'class':'m-badge'}));
+        a={x:s.x+z/2,y:s.y+z*0.71,'text-anchor':'middle','class':'m-badge-t'};if(z!==26)a['font-size']=Math.round(z*0.6);
+        A(el('text',a,s.L||''));break;
+      case 'entry':
+        var tx=s.txt||'Entrada';
+        if(s.v){A(el('rect',{x:s.x,y:s.y,width:18,height:72,'class':'m-entry'}));A(el('text',{'class':'m-entry-t','text-anchor':'middle',transform:'translate('+(s.x+13)+' '+(s.y+36)+') rotate(90)'},tx));}
+        else{var w=Math.max(72,7*tx.length+14);A(el('rect',{x:s.x,y:s.y,width:w,height:18,'class':'m-entry'}));A(el('text',{x:s.x+w/2,y:s.y+13,'class':'m-entry-t','text-anchor':'middle'},tx));}
+        break;
+      case 'north':
+        var gn=A(el('g',{transform:'translate('+s.x+' '+s.y+')'}));
+        gn.appendChild(el('path',{'class':'m-ink',d:'M12 0 L21 28 L12 21 L3 28 Z'}));
+        gn.appendChild(el('text',{'class':'m-name',x:12,y:48,'text-anchor':'middle','font-size':14},'N'));
+        break;
+      case 'scale':
+        var p=ppm||4,stp=scaleStep(p),seg=stp*p/2,gs=A(el('g',{transform:'translate('+s.x+' '+s.y+')'}));
+        for(var k=0;k<4;k++)gs.appendChild(el('rect',{x:k*seg,y:0,width:seg,height:8,'class':k%2?'m-paper':'m-ink'}));
+        gs.appendChild(el('rect',{x:0,y:0,width:4*seg,height:8,'class':'m-inkline'}));
+        gs.appendChild(el('text',{'class':'m-sub',x:0,y:24},'0'));
+        gs.appendChild(el('text',{'class':'m-sub',x:2*seg,y:24,'text-anchor':'middle'},String(stp)));
+        gs.appendChild(el('text',{'class':'m-sub',x:4*seg,y:24,'text-anchor':'end'},(2*stp)+' m'));
+        gs.appendChild(el('text',{'class':'m-sub',x:0,y:40},'Escala orientativa'));
+        break;
+      case 'path':
+        A(el('path',{d:s.d,'class':s.cls==='dot'?'m-dotl':'m-inkline','stroke-width':s.cls==='dot'?3:2,fill:'none',transform:'translate('+(s.dx||0)+' '+(s.dy||0)+')'}));
+        break;
+    }
+    return g;
+  }
+  function drawShapes(parent,shapes,ppm){parent.innerHTML='';(shapes||[]).forEach(function(s){parent.appendChild(shapeG(s,ppm));});}
+  function shapeZone(sh,x,y){
+    for(var i=sh.length-1;i>=0;i--){var s=sh[i];
+      if(s.t==='zone'&&(s.L||s.name)&&x>=s.x-6&&x<=s.x+s.w+6&&y>=s.y-6&&y<=s.y+s.h+6)return (s.L?s.L+' · ':'')+(s.name||'Zona');}
+    var f=sh.filter(function(s){return s.t==='rect'&&s.s==='fence';}).sort(function(a,b){return b.w*b.h-a.w*a.h;})[0];
+    if(!f)return null;
+    var tol=16,L=f.x,R=f.x+f.w,T=f.y,B=f.y+f.h;
+    var inX=x>=L-tol&&x<=R+tol,inY=y>=T-tol&&y<=B+tol;
+    if((inX&&(Math.abs(y-T)<=tol||Math.abs(y-B)<=tol))||(inY&&(Math.abs(x-L)<=tol||Math.abs(x-R)<=tol)))return 'Vallado perimetral';
+    if(x>L&&x<R&&y>T&&y<B)return 'Interior del recinto · viales';
+    return 'Exterior del recinto';
+  }
+
+  /* ===== Editor de planos ===== */
+  var ICO={
+    select:'<path d="M5 3l12 8-6 1.5L8 19z"/>',zone:'<rect x="3" y="5" width="18" height="14"/><rect x="5" y="7" width="5" height="5" fill="currentColor"/>',
+    rect:'<rect x="4" y="6" width="16" height="12"/>',circle:'<circle cx="12" cy="12" r="8"/>',line:'<path d="M4 19L20 5"/>',
+    fence:'<rect x="3" y="5" width="18" height="14" stroke-dasharray="3 2"/>',road:'<path d="M2 9h20M2 15h20"/>',
+    sea:'<path d="M2 9q3-3 5 0t5 0 5 0 5 0M2 15q3-3 5 0t5 0 5 0 5 0"/>',terrain:'<path d="M4 20L20 4M4 12l8-8M12 20l8-8"/>',
+    text:'<path d="M5 6h14M12 6v13"/>',entry:'<rect x="3" y="9" width="18" height="7"/>',badge:'<rect x="5" y="5" width="14" height="14" fill="currentColor"/>',
+    north:'<path d="M12 3l5 16-5-4-5 4z"/>',scale:'<path d="M3 14h18M3 11v6M12 12v4M21 11v6"/>'
+  };
+  var ED_TOOLS=[
+    ['Selección',[['select','Seleccionar']]],
+    ['Formas',[['zone','Edificio / zona'],['rect','Rectángulo'],['circle','Círculo'],['line','Línea']]],
+    ['Entorno',[['fence','Vallado'],['road','Vial'],['sea','Agua'],['terrain','Terreno']]],
+    ['Rótulos',[['text','Texto'],['entry','Entrada'],['badge','Letra de zona'],['north','Norte'],['scale','Escala']]]
+  ];
+  var ED_HINT={select:'Toca una forma para seleccionarla y arrástrala para moverla. Usa los puntos azules para cambiar su tamaño.',
+    zone:'Arrastra sobre el lienzo para dibujar el edificio (o toca para uno de tamaño estándar).',rect:'Arrastra para dibujar el rectángulo.',
+    circle:'Arrastra desde el centro hacia fuera para dibujar el círculo.',line:'Arrastra del punto inicial al final.',
+    fence:'Arrastra para dibujar el vallado perimetral (rectángulo discontinuo).',road:'Arrastra para dibujar el vial.',
+    sea:'Arrastra para dibujar la zona de agua.',terrain:'Arrastra para dibujar el terreno.',
+    text:'Toca donde quieras colocar el texto.',entry:'Toca donde quieras colocar la entrada.',badge:'Toca para colocar una letra de zona.',
+    north:'Toca para colocar la flecha de norte.',scale:'Toca para colocar la escala (se calcula con el ancho real).'};
+  var CLICK_TOOLS={text:1,entry:1,badge:1,north:1,scale:1};
+  var ed={shapes:[],sel:-1,tool:'select',hist:[],mapId:null,drag:null,base:'',open:false};
+  var edSvg=$('edSvg');
+  function edPpm(){var w=Number($('edWidth').value);return 1120/(isFinite(w)&&w>=10?w:280);}
+  function sn(v){return $('edSnap').checked?Math.round(v/5)*5:Math.round(v);}
+  function edPush(){ed.hist.push(JSON.stringify(ed.shapes));if(ed.hist.length>80)ed.hist.shift();$('edUndo').disabled=false;}
+  function edUndo(){if(!ed.hist.length)return;ed.shapes=JSON.parse(ed.hist.pop());if(ed.sel>=ed.shapes.length)ed.sel=-1;$('edUndo').disabled=!ed.hist.length;edRender();edProps();}
+  function nextLetter(){var used={};ed.shapes.forEach(function(s){if((s.t==='zone'||s.t==='badge')&&s.L)used[s.L]=1;});
+    for(var i=0;i<26;i++){var c=String.fromCharCode(65+i);if(!used[c])return c;}return '';}
+  (function buildTools(){
+    var box=$('edTools');
+    ED_TOOLS.forEach(function(g){
+      var d=document.createElement('div');d.className='ed-grp';d.setAttribute('role','group');d.setAttribute('aria-label',g[0]);
+      var t=document.createElement('span');t.className='ed-grp-t';t.textContent=g[0];d.appendChild(t);
+      g[1].forEach(function(o){var b=document.createElement('button');b.type='button';b.className='ed-tool';b.id='edt-'+o[0];b.setAttribute('aria-pressed','false');
+        b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICO[o[0]]+'</svg><span></span>';b.lastChild.textContent=o[1];
+        b.addEventListener('click',function(){edSetTool(o[0]);});d.appendChild(b);});
+      box.appendChild(d);
+    });
+    $('edGridL').innerHTML=$('gridLayer').innerHTML;
+  })();
+  function edSetTool(t){ed.tool=t;ED_TOOLS.forEach(function(g){g[1].forEach(function(o){$('edt-'+o[0]).setAttribute('aria-pressed',o[0]===t?'true':'false');});});
+    edSvg.classList.toggle('drawing',t!=='select');$('edHint').textContent=ED_HINT[t]||'';}
+  function edRender(){
+    var g=$('edShapes');g.innerHTML='';var ppm=edPpm();
+    ed.shapes.forEach(function(s,i){var sg=shapeG(s,ppm);sg.setAttribute('data-i',i);sg.setAttribute('class','ed-sh');
+      var hit=null;
+      if(s.t==='rect'&&(s.s==='fence'))hit=el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,'class':'ed-hit'});
+      else if(s.t==='line')hit=el('line',{x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2,'class':'ed-hit'});
+      else if(s.t==='path')hit=el('path',{d:s.d,transform:'translate('+(s.dx||0)+' '+(s.dy||0)+')','class':'ed-hit'});
+      if(hit)sg.appendChild(hit);
+      g.appendChild(sg);});
+    edRenderSel();
+  }
+  function edHandles(s){
+    if(s.t==='rect'||s.t==='zone')return [{k:'tl',x:s.x,y:s.y},{k:'br',x:s.x+s.w,y:s.y+s.h}];
+    if(s.t==='circle')return [{k:'r',x:s.cx+s.r,y:s.cy}];
+    if(s.t==='line')return [{k:'p1',x:s.x1,y:s.y1},{k:'p2',x:s.x2,y:s.y2}];
+    return [];
+  }
+  function edRenderSel(){
+    var g=$('edSel');g.innerHTML='';var s=ed.shapes[ed.sel];if(!s)return;
+    var sg=$('edShapes').children[ed.sel],b;try{b=sg.getBBox();}catch(e){b={x:0,y:0,width:0,height:0};}
+    g.appendChild(el('rect',{x:b.x-4,y:b.y-4,width:b.width+8,height:b.height+8,'class':'ed-selbox'}));
+    edHandles(s).forEach(function(h){g.appendChild(el('circle',{cx:h.x,cy:h.y,r:11,'class':'ed-h','data-h':h.k}));});
+  }
+  function moveShape(s,dx,dy){
+    if('x' in s){s.x+=dx;s.y+=dy;}
+    if('cx' in s){s.cx+=dx;s.cy+=dy;}
+    if('x1' in s){s.x1+=dx;s.y1+=dy;s.x2+=dx;s.y2+=dy;}
+    if(s.t==='path'){s.dx=(s.dx||0)+dx;s.dy=(s.dy||0)+dy;}
+    return s;
+  }
+  function edPt(ev){var p=edSvg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;var q=p.matrixTransform(edSvg.getScreenCTM().inverse());return {x:q.x,y:q.y};}
+  function rectFrom(a,b){return {x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};}
+  var DEF_SIZE={zone:[180,110],rect:[120,80],fence:[400,260],road:[240,46],sea:[300,110],terrain:[300,110]};
+  var TOOL_RECT={rect:'zone',fence:'fence',road:'road',sea:'sea',terrain:'terrain'};
+  function shapeFromDrag(tool,a,b){
+    var r=rectFrom(a,b),tiny=r.w<8&&r.h<8;
+    if(tool==='circle'){var rr=Math.round(Math.hypot(b.x-a.x,b.y-a.y));return {t:'circle',cx:a.x,cy:a.y,r:rr<8?40:rr,s:'zone'};}
+    if(tool==='line'){return tiny?{t:'line',x1:a.x,y1:a.y,x2:a.x+120,y2:a.y,s:'ink'}:{t:'line',x1:a.x,y1:a.y,x2:b.x,y2:b.y,s:'ink'};}
+    if(tiny){r.w=DEF_SIZE[tool][0];r.h=DEF_SIZE[tool][1];}
+    r.w=Math.max(r.w,10);r.h=Math.max(r.h,10);
+    if(tool==='zone')return {t:'zone',x:r.x,y:r.y,w:r.w,h:r.h,L:nextLetter(),name:'Nuevo edificio',sub:''};
+    return {t:'rect',x:r.x,y:r.y,w:r.w,h:r.h,s:TOOL_RECT[tool]};
+  }
+  function shapeAt(tool,x,y){
+    if(tool==='text')return {t:'text',x:x,y:y,txt:'Texto',s:'label'};
+    if(tool==='entry')return {t:'entry',x:x,y:y,v:0,txt:'Entrada'};
+    if(tool==='badge')return {t:'badge',x:x,y:y,L:nextLetter()};
+    if(tool==='north')return {t:'north',x:x,y:y};
+    return {t:'scale',x:x,y:y};
+  }
+  function edCapture(ev){try{edSvg.setPointerCapture(ev.pointerId);}catch(e){}}
+  edSvg.addEventListener('pointerdown',function(ev){
+    if(ev.button>0)return;
+    var p=edPt(ev),hk=ev.target.getAttribute&&ev.target.getAttribute('data-h');
+    if(hk&&ed.sel>=0){edPush();ed.drag={mode:'handle',k:hk,orig:clone(ed.shapes[ed.sel]),snap:ed.hist[ed.hist.length-1]};edCapture(ev);ev.preventDefault();return;}
+    if(ed.tool==='select'){
+      var t=ev.target.closest?ev.target.closest('.ed-sh'):null;
+      if(t){var i=+t.getAttribute('data-i');var changed=ed.sel!==i;ed.sel=i;edPush();
+        ed.drag={mode:'move',p0:p,orig:clone(ed.shapes[i]),snap:ed.hist[ed.hist.length-1]};edRenderSel();if(changed)edProps();edCapture(ev);ev.preventDefault();}
+      else if(ed.sel!==-1){ed.sel=-1;edRenderSel();edProps();}
+      return;
+    }
+    var x=sn(p.x),y=sn(p.y);
+    if(CLICK_TOOLS[ed.tool]){edPush();ed.shapes.push(shapeAt(ed.tool,x,y));ed.sel=ed.shapes.length-1;edSetTool('select');edRender();edProps(true);ev.preventDefault();return;}
+    ed.drag={mode:'create',tool:ed.tool,p0:{x:x,y:y},p1:{x:x,y:y}};edCapture(ev);ev.preventDefault();
+  });
+  edSvg.addEventListener('pointermove',function(ev){
+    var d=ed.drag;if(!d)return;var p=edPt(ev);
+    if(d.mode==='create'){d.p1={x:sn(p.x),y:sn(p.y)};var tg=$('edTmp');tg.innerHTML='';tg.appendChild(shapeG(shapeFromDrag(d.tool,d.p0,d.p1),edPpm()));return;}
+    var s=clone(d.orig);
+    if(d.mode==='move'){var st=$('edSnap').checked?5:1;moveShape(s,Math.round((p.x-d.p0.x)/st)*st,Math.round((p.y-d.p0.y)/st)*st);}
+    else{var X=sn(p.x),Y=sn(p.y);
+      if(d.k==='br'){s.w=Math.max(10,X-s.x);s.h=Math.max(10,Y-s.y);}
+      else if(d.k==='tl'){var r=s.x+s.w,bt=s.y+s.h;s.x=Math.min(X,r-10);s.y=Math.min(Y,bt-10);s.w=r-s.x;s.h=bt-s.y;}
+      else if(d.k==='r'){s.r=Math.max(5,Math.round(Math.hypot(p.x-s.cx,p.y-s.cy)));}
+      else if(d.k==='p1'){s.x1=X;s.y1=Y;}else if(d.k==='p2'){s.x2=X;s.y2=Y;}}
+    ed.shapes[ed.sel]=s;edRender();
+  });
+  function edEnd(){
+    var d=ed.drag;if(!d)return;ed.drag=null;
+    if(d.mode==='create'){$('edTmp').innerHTML='';edPush();ed.shapes.push(shapeFromDrag(d.tool,d.p0,d.p1));ed.sel=ed.shapes.length-1;edSetTool('select');edRender();edProps(true);return;}
+    if(JSON.stringify(ed.shapes)===d.snap){ed.hist.pop();$('edUndo').disabled=!ed.hist.length;}
+    edProps();
+  }
+  edSvg.addEventListener('pointerup',edEnd);edSvg.addEventListener('pointercancel',edEnd);
+
+  /* Propiedades */
+  function edProps(focusFirst){
+    var box=$('edProps');box.innerHTML='';var s=ed.shapes[ed.sel];
+    function h(t){var x=document.createElement('h2');x.textContent=t;box.appendChild(x);}
+    function para(t){var x=document.createElement('p');x.className='ed-hint';x.textContent=t;box.appendChild(x);return x;}
+    if(!s){
+      h('Propiedades');
+      para('Elige una herramienta y dibuja sobre el lienzo arrastrando (o tocando, en textos, entradas y letras). Después toca cualquier forma para editarla, moverla o eliminarla.');
+      para(ed.shapes.length+' formas en el plano. Atajos con teclado: Supr para borrar, flechas para mover (Mayús: 10 px), Ctrl+Z para deshacer.');
+      return;
+    }
+    var NAMES={rect:'Rectángulo',zone:'Edificio / zona',circle:'Círculo',line:'Línea',text:'Texto',entry:'Entrada',badge:'Letra de zona',north:'Norte',scale:'Escala',path:'Trazo'};
+    h(NAMES[s.t]||'Forma');
+    var first=null;
+    function upd(fn){fn(ed.shapes[ed.sel]);edRender();}
+    function field(label,node,wrap){var f=document.createElement('div');f.className='tp-field';var l=document.createElement('label');l.textContent=label;l.htmlFor=node.id;f.appendChild(l);f.appendChild(node);(wrap||box).appendChild(f);if(!first)first=node;return node;}
+    var uid=0;function nid(){uid++;return 'edp-'+uid;}
+    function txt(label,key,opt){var x=document.createElement(opt&&opt.multi?'textarea':'input');if(!(opt&&opt.multi))x.type='text';x.className='tp-in';x.id=nid();x.value=s[key]==null?'':s[key];if(opt&&opt.max)x.maxLength=opt.max;
+      x.addEventListener('focus',edPush);x.addEventListener('input',function(){var v=x.value;if(opt&&opt.up){v=v.toUpperCase();x.value=v;}upd(function(o){o[key]=v;});});return field(label,x,opt&&opt.wrap);}
+    function numf(label,key,opt){var x=document.createElement('input');x.type='number';x.className='tp-in';x.id=nid();x.value=s[key]==null?'':s[key];x.step='1';if(opt&&opt.min!=null)x.min=opt.min;
+      x.addEventListener('focus',edPush);x.addEventListener('input',function(){var v=x.value===''?null:Number(x.value);if(v!=null&&!isFinite(v))return;if(v!=null&&opt&&opt.min!=null)v=Math.max(opt.min,v);upd(function(o){if(v==null){if(opt&&opt.opt)delete o[key];}else o[key]=v;});});return field(label,x,opt&&opt.wrap);}
+    function selF(label,key,opts,opt){var x=document.createElement('select');x.className='tp-in';x.id=nid();opts.forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];if(String(s[key]==null?'':s[key])===String(o[0]))op.selected=true;x.appendChild(op);});
+      x.addEventListener('change',function(){edPush();var v=x.value;upd(function(o){if(opt&&opt.num)v=Number(v);if(v===''||v===0&&opt&&opt.zeroDel)delete o[key];else o[key]=v;});});return field(label,x,opt&&opt.wrap);}
+    function chk(label,key){var l=document.createElement('label');l.className='ed-chk';var x=document.createElement('input');x.type='checkbox';x.checked=!!s[key];x.id=nid();l.appendChild(x);l.appendChild(document.createTextNode(label));
+      x.addEventListener('change',function(){edPush();upd(function(o){if(x.checked)o[key]=1;else delete o[key];});});box.appendChild(l);return x;}
+    function two(){var d=document.createElement('div');d.className='ed-2';box.appendChild(d);return d;}
+    if(s.t==='zone'){
+      var w1=two();txt('Letra','L',{max:2,up:true,wrap:w1});numf('Tamaño del nombre','ns',{min:8,opt:1,wrap:w1});
+      txt('Nombre','name');txt('Texto secundario (una línea por renglón)','sub',{multi:1});chk('Tono claro','light');
+    }
+    if(s.t==='rect')selF('Estilo','s',RECT_LBL);
+    if(s.t==='circle'){selF('Estilo','s',CIRC_LBL);numf('Radio (px)','r',{min:5});}
+    if(s.t==='line'){selF('Estilo','s',LINE_LBL);numf('Grosor (vacío = por defecto)','w',{min:1,opt:1});}
+    if(s.t==='text'){
+      txt('Texto','txt');selF('Estilo','s',TEXT_LBL);
+      var w2=two();numf('Tamaño (vacío = auto)','size',{min:6,opt:1,wrap:w2});selF('Giro','rot',[['','0°'],['90','90°'],['-90','−90°']],{num:1,zeroDel:1,wrap:w2});
+      selF('Alineación','a',[['','Automática'],['start','Inicio'],['middle','Centro'],['end','Final']]);chk('Cursiva','it');
+    }
+    if(s.t==='entry'){txt('Texto','txt');chk('Vertical','v');}
+    if(s.t==='badge')txt('Letra','L',{max:2,up:true});
+    if(s.t==='scale')para('La escala se calcula a partir del ancho real indicado arriba.');
+    if(s.t==='rect'||s.t==='zone'){var w3=two();numf('X','x',{wrap:w3});numf('Y','y',{wrap:w3});numf('Ancho','w',{min:10,wrap:w3});numf('Alto','h',{min:10,wrap:w3});}
+    else if(s.t!=='line'&&s.t!=='path'&&s.t!=='circle'){var w4=two();numf('X','x',{wrap:w4});numf('Y','y',{wrap:w4});}
+    var row=document.createElement('div');row.className='row';box.appendChild(row);
+    function bt(t,cls,fn){var b=document.createElement('button');b.type='button';b.className='btn small'+(cls?' '+cls:'');b.textContent=t;b.addEventListener('click',fn);row.appendChild(b);return b;}
+    bt('Duplicar','',function(){edPush();var c=moveShape(clone(s),20,20);ed.shapes.push(c);ed.sel=ed.shapes.length-1;edRender();edProps();});
+    bt('Traer al frente','',function(){edPush();ed.shapes.splice(ed.sel,1);ed.shapes.push(s);ed.sel=ed.shapes.length-1;edRender();});
+    bt('Enviar al fondo','',function(){edPush();ed.shapes.splice(ed.sel,1);ed.shapes.unshift(s);ed.sel=0;edRender();});
+    bt('Eliminar','danger',function(){edDelete();});
+    if(focusFirst&&first&&s.t!=='north'&&s.t!=='scale'){first.focus();if(first.select)first.select();}
+  }
+  function edDelete(){if(ed.sel<0)return;edPush();ed.shapes.splice(ed.sel,1);ed.sel=-1;edRender();edProps();}
+  document.addEventListener('keydown',function(ev){
+    if(!ed.open)return;
+    var tg=ev.target,typing=tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT');
+    if((ev.ctrlKey||ev.metaKey)&&(ev.key==='z'||ev.key==='Z')&&!typing){ev.preventDefault();edUndo();return;}
+    if(typing)return;
+    if(ev.key==='Escape'){if(ed.tool!=='select')edSetTool('select');else if(ed.sel>=0){ed.sel=-1;edRenderSel();edProps();}return;}
+    if(ed.sel<0)return;
+    if(ev.key==='Delete'||ev.key==='Backspace'){ev.preventDefault();edDelete();return;}
+    var st=ev.shiftKey?10:1,mv={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[ev.key];
+    if(mv){ev.preventDefault();edPush();moveShape(ed.shapes[ed.sel],mv[0],mv[1]);edRender();}
+  });
+  function edOpen(m){
+    ed.shapes=clone(m.shapes||[]);ed.mapId=m.id||null;ed.sel=-1;ed.hist=[];ed.drag=null;ed.open=true;
+    $('edName').value=m.name||'';$('edWidth').value=Math.round(m.widthM||280);
+    $('edUndo').disabled=true;$('edCloseConfirm').hidden=true;$('edGridL').style.display=$('edGridT').checked?'':'none';
+    $('mapEd').hidden=false;document.body.style.overflow='hidden';
+    edSetTool('select');edRender();edProps();
+    ed.base=edSig();
+    $('mapEd').scrollTop=0;$('edName').focus();
+  }
+  function edSig(){return JSON.stringify([ed.shapes,$('edName').value,$('edWidth').value]);}
+  function edCloseNow(){ed.open=false;$('mapEd').hidden=true;document.body.style.overflow='';$('edCloseConfirm').hidden=true;var b=$('edNew');if(b)b.focus();}
+  $('edClose').addEventListener('click',function(){if(edSig()!==ed.base){$('edCloseConfirm').hidden=false;$('edCloseNo').focus();}else edCloseNow();});
+  $('edCloseYes').addEventListener('click',edCloseNow);
+  $('edCloseNo').addEventListener('click',function(){$('edCloseConfirm').hidden=true;});
+  $('edUndo').addEventListener('click',edUndo);
+  $('edSnap').addEventListener('change',function(){});
+  $('edGridT').addEventListener('change',function(){$('edGridL').style.display=this.checked?'':'none';});
+  $('edWidth').addEventListener('input',edRender);
+  $('edSave').addEventListener('click',function(){
+    var name=$('edName').value.trim(),wm=Number($('edWidth').value);
+    if(!name){toast('Escribe un nombre para el plano');$('edName').focus();return;}
+    if(!isFinite(wm)||wm<10){toast('Indica el ancho real en metros (mínimo 10 m)');$('edWidth').focus();return;}
+    if(!ed.shapes.length){toast('El plano está vacío. Dibuja al menos una forma.');return;}
+    var data={name:name,shapes:clone(ed.shapes),widthM:wm,pxPerM:1120/wm,x:30,y:30,w:1120,h:800};
+    var ex=ed.mapId&&pack.maps.filter(function(x){return x.id===ed.mapId;})[0],backup=ex?clone(ex):null,isNew=!ex;
+    if(ex){for(var k in data)ex[k]=data[k];delete ex.img;}
+    else{ex=data;ex.id='m'+Date.now();pack.maps.push(ex);ed.mapId=ex.id;}
+    var prevActive=pack.activeMap;pack.activeMap=ex.id;
+    if(!savePack()){if(isNew){pack.maps.pop();ed.mapId=null;}else{for(var k2 in ex)delete ex[k2];for(var k3 in backup)ex[k3]=backup[k3];}pack.activeMap=prevActive;return;}
+    applyMap(ex);renderAll();renderPackName();renderTeacher();
+    ed.base=edSig();
+    toast((isNew?'Plano creado y activado: ':'Plano guardado y activado: ')+name);
+  });
+  (function fillTpl(){var s=$('edTpl');MAP_PRESETS.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.name;s.appendChild(o);});})();
+  $('edNew').addEventListener('click',function(){
+    var p=MAP_PRESETS.filter(function(x){return x.id===$('edTpl').value;})[0]||MAP_PRESETS[0];
+    edOpen({id:null,name:p.id==='blank'?'':p.name,widthM:p.widthM,shapes:p.shapes});
   });
 
   /* Inicio */
