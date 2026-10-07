@@ -241,6 +241,12 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .gate-btn span{font-size:13px;color:var(--muted)}
 .gate-btn small{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 .gate-pw{display:flex;flex-direction:column;gap:8px}
+.gate-install{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.gate-install summary{font-weight:600;color:var(--ink);font-size:14px}
+.gate-install ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.45}
+.gate-install a{color:var(--accent);overflow-wrap:anywhere}
+.gate-install b{color:var(--ink)}
+@media (display-mode: standalone){.gate-install{display:none}}
 .gate-err{color:var(--danger);font-size:13px;margin:0;min-height:1.2em}
 .gate-pack{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
 .file-btn{display:inline-flex;align-items:center;cursor:pointer;font-weight:500;color:var(--ink)}
@@ -337,6 +343,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         <button class="btn" type="button" id="gatePwCancel">Cancelar</button>
       </div>
     </form>
+    <details class="gate-install" id="gateInstall">
+      <summary>Instalar la app en tu ordenador (Windows)</summary>
+      <ul>
+        <li><b>Edge</b> (viene con Windows): abre <a href="https://plano-edam.onrender.com" target="_blank" rel="noopener">https://plano-edam.onrender.com</a>, ve al menú «…» → <b>Aplicaciones</b> → <b>Instalar este sitio como aplicación</b>.</li>
+        <li><b>Chrome</b>: abre la misma dirección y pulsa el icono de instalar que aparece a la derecha de la barra de direcciones (o menú ⋮ → <b>Transmitir, guardar y compartir</b> → <b>Instalar página como aplicación</b>).</li>
+      </ul>
+    </details>
     <div class="gate-pack">
       <span>Paquete de actividad: <b id="gatePackName" style="color:var(--ink)">—</b></span>
       <div class="row">
