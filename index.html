@@ -768,7 +768,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function presetMap(id){var p=MAP_PRESETS.filter(function(x){return x.id===id;})[0];return {id:'pre-'+id,name:p.name,preset:true,shapes:clone(p.shapes),widthM:p.widthM,pxPerM:1120/p.widthM,x:30,y:30,w:1120,h:800};}
   function defaultMaps(){return [clone(DEFAULT_MAP)].concat(PRESET_MAPS.map(presetMap));}
   var BLANK_MAP={id:'',name:'Sin plano seleccionado',blank:true,shapes:[],pxPerM:4,widthM:280,x:30,y:30,w:1120,h:800};
-  function defaultPack(){return {name:'EDAM · paquete por defecto',catalog:clone(DEFAULT_CATALOG),maps:defaultMaps(),activeMap:'',presetsV:1,updatedAt:null};}
+  var DEFAULT_ACTIVE='pre-edam-costa-este';
+  function defaultPack(){return {name:'EDAM · paquete por defecto',catalog:clone(DEFAULT_CATALOG),maps:defaultMaps(),activeMap:DEFAULT_ACTIVE,presetsV:2,updatedAt:null};}
   function validPack(o){
     if(!o||!Array.isArray(o.catalog)||!o.catalog.length||!Array.isArray(o.maps)||!o.maps.length)return false;
     var seen={},lk={};LAYERS.forEach(function(L){lk[L.k]=1;});
@@ -793,6 +794,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   }
   function currentMap(){return pack.maps.filter(function(m){return m.id===pack.activeMap;})[0]||BLANK_MAP;}
   if(!pack.presetsV){PRESET_MAPS.forEach(function(id){if(!pack.maps.some(function(m){return m.id==='pre-'+id;}))pack.maps.push(presetMap(id));});pack.presetsV=1;try{localStorage.setItem(PACK_KEY,JSON.stringify(pack));}catch(e){}}
+  if((pack.presetsV||0)<2){PRESET_MAPS.forEach(function(id){if(!pack.maps.some(function(m){return m.id==='pre-'+id;}))pack.maps.push(presetMap(id));});if(!pack.activeMap&&pack.maps.some(function(m){return m.id===DEFAULT_ACTIVE;}))pack.activeMap=DEFAULT_ACTIVE;pack.presetsV=2;try{localStorage.setItem(PACK_KEY,JSON.stringify(pack));}catch(e){}}
   applyCatalog(pack.catalog);
   var EURF=new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:true});
   function eur(v){return EURF.format(v||0).replace(/\u00a0|\u202f/g,' ');}
@@ -1675,7 +1677,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     var s=pendingCfg;if(!s)return;
     if(pendingCfgPack){
       if(role==='teacher'){packVolatile=true;toast('Se usa el paquete del archivo solo para revisar. Recarga la app para volver a tu paquete.');}
-      pack={name:pendingCfgPack.name||'Paquete del archivo',catalog:pendingCfgPack.catalog,maps:pendingCfgPack.maps,activeMap:typeof pendingCfgPack.activeMap==='string'?pendingCfgPack.activeMap:pendingCfgPack.maps[0].id,presetsV:1,updatedAt:null};
+      pack={name:pendingCfgPack.name||'Paquete del archivo',catalog:pendingCfgPack.catalog,maps:pendingCfgPack.maps,activeMap:typeof pendingCfgPack.activeMap==='string'?pendingCfgPack.activeMap:pendingCfgPack.maps[0].id,presetsV:2,updatedAt:null};
       savePack();applyPack();
     }
     state.team=String(s.team||'');state.budget=String(s.budget||'');state.obs=String(s.obs||'');
@@ -1750,7 +1752,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   }
   function loadPackObject(o){
     if(!o||o.app!==PACK_APP||!validPack(o)){toast('El archivo no es un paquete docente válido del Plano EDAM');return false;}
-    pack={name:String(o.name||'Paquete docente'),catalog:o.catalog,maps:o.maps,activeMap:typeof o.activeMap==='string'?o.activeMap:o.maps[0].id,presetsV:1,updatedAt:o.savedAt||null};
+    pack={name:String(o.name||'Paquete docente'),catalog:o.catalog,maps:o.maps,activeMap:typeof o.activeMap==='string'?o.activeMap:o.maps[0].id,presetsV:2,updatedAt:o.savedAt||null};
     packVolatile=false;
     if(!savePack())return false;
     var removed=applyPack();
@@ -2328,7 +2330,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       if(o.m&&o.m.ref){if(maps.some(function(x){return x.id===o.m.ref;}))active=o.m.ref;}
       else if(o.m&&Array.isArray(o.m.shapes)){var nm={id:o.m.id||('m'+Date.now()),name:String(o.m.name||'Plano del docente'),shapes:o.m.shapes,widthM:Number(o.m.widthM)||280,x:30,y:30,w:1120,h:800};nm.pxPerM=1120/nm.widthM;
         maps=maps.filter(function(x){return x.id!==nm.id;});maps.push(nm);active=nm.id;}
-      var np={name:String(o.n||'Paquete docente'),catalog:cat,maps:maps,activeMap:active,presetsV:1,updatedAt:new Date().toISOString()};
+      var np={name:String(o.n||'Paquete docente'),catalog:cat,maps:maps,activeMap:active,presetsV:2,updatedAt:new Date().toISOString()};
       if(!validPack(np)){toast('El enlace del docente no es válido');return;}
       pack=np;packVolatile=false;savePack();var removed=applyPack();
       toast('Configuración del docente cargada: plano «'+currentMap().name+'»'+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
