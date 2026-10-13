@@ -2346,6 +2346,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   showGate();
   readLinkPack();
   window.addEventListener('hashchange',readLinkPack);
+  /* Sincroniza otras pestañas/ventanas abiertas (p. ej. vista de alumno y panel docente a la vez) */
+  window.addEventListener('storage',function(e){
+    if(e.key!==PACK_KEY||!e.newValue)return;
+    try{var o=JSON.parse(e.newValue);if(!validPack(o))return;
+      var prev=currentMap().id;pack=o;packVolatile=false;applyPack();
+      if(currentMap().id!==prev)toast('Plano actualizado por el docente: '+currentMap().name);}catch(_){}
+  });
   if(window.ResizeObserver){new ResizeObserver(function(){renderMap();}).observe(mapInner);}
   else window.addEventListener('resize',renderMap);
 })();
