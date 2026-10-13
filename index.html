@@ -265,6 +265,13 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .tp-in.price{width:110px;text-align:right;font-variant-numeric:tabular-nums}
 .tp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:end}
 .tp-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tp-fold{border:1px solid var(--line)}
+.tp-fold summary{min-height:48px;padding:6px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink)}
+.tp-fold[open] summary{border-bottom:1px solid var(--line)}
+.tp-fold-t{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tp-fold-n{font-size:12px;color:var(--muted);font-weight:500}
+.tp-fold .tp-table{border:0}
+.tp-fold .row{padding:8px 12px}
 .map-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
 .map-list li{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 10px}
 .map-list li+li{border-top:1px solid var(--line)}
@@ -674,7 +681,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       <button class="btn small" type="button" id="packResetNo">Cancelar</button>
     </div>
 
-    <h3>Elementos de seguridad</h3>
+    <details class="tp-fold" id="catFold">
+    <summary><span class="tp-fold-t">Elementos de seguridad</span> <span class="tp-fold-n" id="catFoldN"></span></summary>
     <div class="tp-table">
       <table>
         <thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Tipo (símbolo)</th><th scope="col">Capa</th><th scope="col">Cobertura en el plano</th><th scope="col">Precio (€)</th><th scope="col"><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Acciones</span></th></tr></thead>
@@ -682,6 +690,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       </table>
     </div>
     <div class="row"><button class="btn" type="button" id="catAdd">Añadir elemento</button><span class="empty" style="font-size:12px" id="catCount"></span></div>
+    </details>
 
     <h3>Planos</h3>
     <p class="empty" style="margin:0;font-size:13px">El plano marcado es el que verán los alumnos al cargar el paquete. Las zonas (A, B, C…) se detectan en el plano EDAM y en los planos hechos con el editor; en los planos añadidos como imagen se usan las coordenadas de la cuadrícula.</p>
@@ -1806,7 +1815,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       });
       body.appendChild(tr);
     });
-    $('catCount').textContent=pack.catalog.length+' elementos en el catálogo';
+    $('catCount').textContent=pack.catalog.length+' elementos en el catálogo';$('catFoldN').textContent='· '+pack.catalog.length+' elementos · pulsa para desplegar';
     var ml=$('mapList');ml.innerHTML='';
     (function(){var li=document.createElement('li'),lab=document.createElement('label'),rb=document.createElement('input');rb.type='radio';rb.name='activeMap';rb.id='map-none';rb.checked=!!currentMap().blank;
       lab.setAttribute('for','map-none');lab.appendChild(rb);var sp=document.createElement('span');sp.textContent='Ninguno · el alumnado ve el plano en blanco';lab.appendChild(sp);li.appendChild(lab);
@@ -2305,35 +2314,59 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   async function unzip(bytes){var ds=new DecompressionStream('deflate-raw');var st=new Blob([bytes]).stream().pipeThrough(ds);return await new Response(st).text();}
   function linkBase(){var inFrame=false;try{inFrame=window.top!==window;}catch(e){inFrame=true;}
     if(!inFrame&&/^https?:$/.test(location.protocol))return location.origin+location.pathname;return APP_URL;}
+  var MAPCODE={'edam':'o','pre-almacen-quimico':'q','pre-edam-costa-este':'c','pre-cpd-telecom':'d'},DEF_PACK_NAME='EDAM · paquete por defecto';
+  function sameStructure(a,b){return a.length===b.length&&a.every(function(d,i){var e=b[i];return d.code===e.code&&d.name===e.name&&d.cat===e.cat&&d.layer===e.layer&&(d.beh||'none')===(e.beh||'none');});}
+  async function buildLink(){
+    var m=currentMap(),parts=[];
+    if(m.blank)parts.push('m=n');
+    else if(MAPCODE[m.id]&&!m.edited)parts.push('m='+MAPCODE[m.id]);
+    else parts.push('x='+b64u(await zip(JSON.stringify({id:m.id,name:m.name,shapes:m.shapes,widthM:m.widthM}))));
+    if(sameStructure(pack.catalog,DEFAULT_CATALOG)){
+      var diffs=pack.catalog.filter(function(d,i){return Number(d.price)!==Number(DEFAULT_CATALOG[i].price);}).map(function(d){return d.code+':'+d.price;});
+      if(diffs.length)parts.push('p='+diffs.join(','));
+    }else parts.push('k='+b64u(await zip(JSON.stringify(pack.catalog.map(function(d){return [d.code,d.name,d.cat,d.layer,d.price,d.beh||'none'];})))));
+    if(pack.name&&pack.name!==DEF_PACK_NAME)parts.push('n='+encodeURIComponent(pack.name));
+    return linkBase()+'#'+parts.join('&');
+  }
   $('packLink').addEventListener('click',async function(){
     var m=currentMap();
     if(m.img){$('packLinkInfo').textContent='El plano activo es una imagen y no cabe en un enlace. Para ese plano descarga el paquete (.json) y compártelo.';toast('Plano de imagen: comparte el paquete .json');return;}
     if(typeof CompressionStream==='undefined'){toast('Este navegador no permite generar el enlace. Usa Chrome, Edge, Firefox o Safari actualizados.');return;}
-    var mo=m.blank?null:(m.builtin||m.preset)&&!m.edited?{ref:m.id}:{id:m.id,name:m.name,shapes:m.shapes,widthM:m.widthM};
-    var o={v:1,n:pack.name,c:pack.catalog.map(function(d){return [d.code,d.name,d.cat,d.layer,d.price,d.beh||'none'];}),m:mo};
     try{
-      var url=linkBase()+'#pack='+b64u(await zip(JSON.stringify(o)));
+      var url=await buildLink();
       $('packLinkOut').value=url;$('packLinkOut').select();
       var copied=false;try{if(navigator.clipboard){await navigator.clipboard.writeText(url);copied=true;}}catch(e){}
-      $('packLinkInfo').textContent='Enlace generado con el plano «'+m.name+'» y '+pack.catalog.length+' elementos ('+url.length+' caracteres).'+(copied?' Copiado al portapapeles.':' Cópialo del cuadro de arriba.')+' Si cambias algo, genera uno nuevo.';
+      $('packLinkInfo').textContent='Enlace generado con el plano «'+m.name+'» y '+pack.catalog.length+' elementos ('+url.length+' caracteres).'+(copied?' Copiado al portapapeles.':' Cópialo del cuadro de arriba.')+' Si cambias algo, genera uno nuevo.'+(url.length>200?' Es más largo porque incluye un plano o un catálogo propios.':'');
       toast(copied?'Enlace copiado al portapapeles':'Enlace generado: cópialo del cuadro');
     }catch(e){toast('No se pudo generar el enlace');}
   });
+  function applyLinkPack(np){
+    if(!validPack(np)){toast('El enlace del docente no es válido');return;}
+    pack=np;packVolatile=false;savePack();var removed=applyPack();
+    toast('Configuración del docente cargada: plano «'+currentMap().name+'»'+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
+  }
+  function customMap(o){var nm={id:o.id||('m'+Date.now()),name:String(o.name||'Plano del docente'),shapes:o.shapes,widthM:Number(o.widthM)||280,x:30,y:30,w:1120,h:800};nm.pxPerM=1120/nm.widthM;return nm;}
   async function readLinkPack(){
-    var h=location.hash||'';if(h.indexOf('#pack=')!==0)return;
+    var h=(location.hash||'').slice(1);if(!h)return;
+    var q=new URLSearchParams(h);
+    if(!q.has('pack')&&!q.has('m')&&!q.has('x')&&!q.has('p')&&!q.has('k'))return;
     try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
-    if(typeof DecompressionStream==='undefined'){toast('Este navegador no puede abrir el enlace del docente. Pide el paquete .json.');return;}
+    var needZip=q.has('pack')||q.has('x')||q.has('k');
+    if(needZip&&typeof DecompressionStream==='undefined'){toast('Este navegador no puede abrir el enlace del docente. Pide el paquete .json.');return;}
     try{
-      var o=JSON.parse(await unzip(unb64u(h.slice(6))));
-      var cat=o.c.map(function(a){return {code:a[0],name:a[1],cat:a[2],layer:a[3],price:a[4],beh:a[5]};});
-      var maps=defaultMaps(),active='';
-      if(o.m&&o.m.ref){if(maps.some(function(x){return x.id===o.m.ref;}))active=o.m.ref;}
-      else if(o.m&&Array.isArray(o.m.shapes)){var nm={id:o.m.id||('m'+Date.now()),name:String(o.m.name||'Plano del docente'),shapes:o.m.shapes,widthM:Number(o.m.widthM)||280,x:30,y:30,w:1120,h:800};nm.pxPerM=1120/nm.widthM;
-        maps=maps.filter(function(x){return x.id!==nm.id;});maps.push(nm);active=nm.id;}
-      var np={name:String(o.n||'Paquete docente'),catalog:cat,maps:maps,activeMap:active,presetsV:2,updatedAt:new Date().toISOString()};
-      if(!validPack(np)){toast('El enlace del docente no es válido');return;}
-      pack=np;packVolatile=false;savePack();var removed=applyPack();
-      toast('Configuración del docente cargada: plano «'+currentMap().name+'»'+(removed?' · se han quitado '+removed+' elementos que ya no existen':''));
+      var maps=defaultMaps(),active='',cat,name=q.get('n')||DEF_PACK_NAME;
+      if(q.has('pack')){
+        var o=JSON.parse(await unzip(unb64u(q.get('pack'))));name=String(o.n||'Paquete docente');
+        cat=o.c.map(function(a){return {code:a[0],name:a[1],cat:a[2],layer:a[3],price:a[4],beh:a[5]};});
+        if(o.m&&o.m.ref){if(maps.some(function(x){return x.id===o.m.ref;}))active=o.m.ref;}
+        else if(o.m&&Array.isArray(o.m.shapes)){var nm0=customMap(o.m);maps=maps.filter(function(x){return x.id!==nm0.id;});maps.push(nm0);active=nm0.id;}
+      }else{
+        if(q.has('k'))cat=JSON.parse(await unzip(unb64u(q.get('k')))).map(function(a){return {code:a[0],name:a[1],cat:a[2],layer:a[3],price:a[4],beh:a[5]};});
+        else{cat=clone(DEFAULT_CATALOG);(q.get('p')||'').split(',').forEach(function(t){var kv=t.split(':');if(kv.length!==2)return;var v=Number(kv[1]);cat.forEach(function(d){if(d.code===kv[0]&&isFinite(v)&&v>=0)d.price=v;});});}
+        if(q.has('x')){var nm=customMap(JSON.parse(await unzip(unb64u(q.get('x')))));maps=maps.filter(function(x){return x.id!==nm.id;});maps.push(nm);active=nm.id;}
+        else{var mc=q.get('m');for(var id in MAPCODE)if(MAPCODE[id]===mc)active=id;}
+      }
+      applyLinkPack({name:name,catalog:cat,maps:maps,activeMap:active,presetsV:2,updatedAt:new Date().toISOString()});
     }catch(e){toast('No se pudo leer el enlace del docente');}
   }
 
