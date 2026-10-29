@@ -292,6 +292,9 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .ev-crit .pt{margin-left:auto;font-family:var(--font-mono);color:var(--muted);white-space:nowrap}
 .ev-total{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;background:var(--accent-soft);font-weight:600}
 .ev-total b{font-family:var(--font-mono);font-size:20px}
+.ev-sumrow{display:flex;gap:8px;align-items:stretch}
+.ev-sumrow textarea{flex:1 1 auto;min-height:96px}
+.ev-sumbtns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
 .ev-rub textarea{min-height:110px;font-family:var(--font-body);font-size:14px;background:var(--surface)}
 .map-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
 .map-list li{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 10px}
@@ -2417,6 +2420,24 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     {k:'d',t:'(d) Seguimiento del estado de bienes y medios (Alarmas, accesos, etc) y propuestas de acción',s:'(d) Seguimiento',lv:[['No entrega o No verifica / no propone acciones',0],['Verifica parcialmente; propuestas vagas',1],['Verifica sistemáticamente y propone acciones adecuadas',2],['Verifica sistemáticamente y propone acciones mejoradas',3]]},
     {k:'e',t:'(e) Visualización/registro de imágenes respetando LOPD (anotación de finalidad, mínima captación, custodia)',s:'(e) LOPD',lv:[['No entrega. Incumple LOPD o no registra',0],['Registra sin detallar finalidad o custodia',1],['Registra con finalidad y custodia descritas',2]]}
   ];
+  var EV_PHR={
+    a:[['no has hecho el recorrido de verificación',0],['has hecho el recorrido de verificación',1]],
+    b:[['te falta el checklist',0],['has completado el checklist',1]],
+    c:[['no presentas las rondas',0],['tus rondas omiten puntos críticos',0],['tus rondas tienen lagunas',0],['tus rondas son completas',1]],
+    d:[['no verificas bienes y medios',0],['tu verificación es parcial',0],['verificas bienes y medios con buenas propuestas',1],['verificas y propones mejoras',1]],
+    e:[['no registras las imágenes según la LOPD',0],['te falta indicar finalidad y custodia de las imágenes',0],['cumples la LOPD con las imágenes',1]]
+  };
+  function evSummary(e){
+    var pos=[],neg=[],t=evTotal(e);
+    RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)return;var ph=EV_PHR[c.k][v];if(!ph)return;(ph[1]?pos:neg).push(ph[0]);});
+    if(!pos.length&&!neg.length)return '';
+    function join(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];}
+    function cap(x){return x.charAt(0).toUpperCase()+x.slice(1);}
+    var out='Nota: '+fmtPt(t.t)+'/'+RUB_MAX+(t.done?'':' (provisional)')+'.';
+    if(pos.length)out+=' '+cap(join(pos))+'.';
+    if(neg.length)out+=' A mejorar: '+join(neg)+'.';
+    return out;
+  }
   var RUB_MAX=RUBRIC.reduce(function(a,c){return a+c.lv[c.lv.length-1][1];},0);
   var EV_KEY='edam-evals-v1',evals=[],evCur=null,evMem={},evUrl=null,evDb=null;
   try{var evRaw=localStorage.getItem(EV_KEY);if(evRaw){var evO=JSON.parse(evRaw);if(Array.isArray(evO))evals=evO;}}catch(e){}
@@ -2482,7 +2503,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     });
     var rub=document.createElement('div');rub.className='ev-rub';
     var tot=document.createElement('div');tot.className='ev-total';tot.innerHTML='<span>Puntuación total</span>';var tv=document.createElement('b');tot.appendChild(tv);
-    function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');}
+    var sumT=null;
+    function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');if(sumT&&e.sumAuto!==false){e.sum=evSummary(e);sumT.value=e.sum;evSave();}}
     e.scores=e.scores||{};
     RUBRIC.forEach(function(c){
       var fs=document.createElement('fieldset');fs.className='ev-crit';var lg=document.createElement('legend');lg.textContent=c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';fs.appendChild(lg);
@@ -2492,7 +2514,20 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
         lb.appendChild(r);lb.appendChild(sp);lb.appendChild(pt);fs.appendChild(lb);});
       rub.appendChild(fs);
     });
-    rub.appendChild(tot);upTot();
+    rub.appendChild(tot);
+    var sf=document.createElement('div');sf.className='tp-field';var sl=document.createElement('label');sl.htmlFor='evSumTxt';sl.textContent='Resumen para el alumno (segunda persona)';
+    var srow=document.createElement('div');srow.className='ev-sumrow';
+    sumT=document.createElement('textarea');sumT.id='evSumTxt';sumT.value=e.sum||'';sumT.placeholder='Se redacta solo al puntuar la rúbrica; puedes editarlo.';
+    sumT.addEventListener('input',function(){e.sum=sumT.value;e.sumAuto=false;evSave();});
+    var sb=document.createElement('div');sb.className='ev-sumbtns';
+    var cp=document.createElement('button');cp.type='button';cp.className='btn primary small';cp.textContent='Copiar texto';
+    cp.addEventListener('click',async function(){var ok=false;try{if(navigator.clipboard){await navigator.clipboard.writeText(sumT.value);ok=true;}}catch(_){}
+      if(!ok){try{sumT.focus();sumT.select();ok=document.execCommand('copy');}catch(_){}}
+      toast(ok?'Resumen copiado':'Selecciona el texto y cópialo manualmente');});
+    var rg=document.createElement('button');rg.type='button';rg.className='btn small';rg.textContent='Regenerar';
+    rg.addEventListener('click',function(){e.sumAuto=true;e.sum=evSummary(e);sumT.value=e.sum;evSave();});
+    sb.appendChild(cp);sb.appendChild(rg);srow.appendChild(sumT);srow.appendChild(sb);sf.appendChild(sl);sf.appendChild(srow);rub.appendChild(sf);
+    upTot();
     var of=document.createElement('div');of.className='tp-field';var ol=document.createElement('label');ol.htmlFor='evObs';ol.textContent='Valoración y mejoras (un párrafo)';
     var ot=document.createElement('textarea');ot.id='evObs';ot.value=e.obs||'';ot.placeholder='Resumen de la evaluación y mejoras concretas…';ot.addEventListener('input',function(){e.obs=ot.value;evSave();});
     of.appendChild(ol);of.appendChild(ot);rub.appendChild(of);
@@ -2521,8 +2556,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function csvCell(v){v=String(v==null?'':v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
   $('evCsv').addEventListener('click',async function(){
     if(!evals.length)return;
-    var rows=[['Alumno / equipo','Archivo'].concat(RUBRIC.map(function(c){return c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';})).concat(['Total (sobre '+RUB_MAX+')','Estado','Valoración y mejoras'])];
-    evals.forEach(function(e){var t=evTotal(e);rows.push([e.name||'',e.file].concat(RUBRIC.map(function(c){var v=e.scores&&e.scores[c.k];return v==null?'':String(v).replace('.',',');})).concat([String(t.t).replace('.',','),t.done?'Evaluado':'Pendiente',e.obs||'']));});
+    var rows=[['Alumno / equipo','Archivo'].concat(RUBRIC.map(function(c){return c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';})).concat(['Total (sobre '+RUB_MAX+')','Estado','Resumen para el alumno','Valoración y mejoras'])];
+    evals.forEach(function(e){var t=evTotal(e);rows.push([e.name||'',e.file].concat(RUBRIC.map(function(c){var v=e.scores&&e.scores[c.k];return v==null?'':String(v).replace('.',',');})).concat([String(t.t).replace('.',','),t.done?'Evaluado':'Pendiente',e.sum||'',e.obs||'']));});
     var csv='﻿'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n');
     var downloads=null;try{downloads=await downloadsP;}catch(e){}
     if(!downloads){toast('La descarga no está disponible en esta vista');return;}
