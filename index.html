@@ -2511,7 +2511,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     if(big.length&&big.every(function(x){return x.length>1&&x===x.toUpperCase();}))n=keep.map(function(x){return /^(de|del|la|las|los|el|y)$/.test(x)?x:x.charAt(0)+x.slice(1).toLowerCase();}).join(' ');
     return n;
   }
-  function evNameFrom(fn){return evCleanName(fn)||String(fn).replace(/\.pdf$/i,'');}
+  function evLightName(t){return String(t||'').replace(/\.pdf$/i,'').replace(/^.*?_assignsubmission_file_/i,'').replace(/^EDAM[_\s-]*plano[_\s-]*/i,'').replace(/[_\s-]*\d{8}$/,'').replace(/[_-]+/g,' ').replace(/\[?sin indicar\]?/i,'').trim();}
+  function evNameFrom(fn){return evCleanName(fn)||evLightName(fn)||String(fn).replace(/\.pdf$/i,'');}
   function evTotal(e){var t=0,all=true;RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)all=false;else t+=v;});return {t:t,done:all};}
   function fmtPt(v){return (Math.round(v*100)/100).toLocaleString('es-ES');}
   function evRender(){
@@ -2767,7 +2768,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       M.allNotes=rd.data?(rd.data.m||[]).map(function(r){return r[3]||'';}).join(' '):'';
       var A=evAuto(M);
       e.md=evMarkdown(rd,M,e);e.auto=A;e.analyzed=true;e.src=M.src;
-      var cleanT=evCleanName(M.team);if(cleanT&&(!e.name||e.name===evNameFrom(e.file)))e.name=cleanT;
+      var cleanT=evCleanName(M.team)||evLightName(M.team);if(cleanT&&(!e.name||e.name===evNameFrom(e.file)))e.name=cleanT;
       if(!e.scores||!Object.keys(e.scores).length){e.scores=JSON.parse(JSON.stringify(A.scores));e.sumAuto=true;}
       if(e.sumAuto!==false)e.sum=evSummary(e);
       evSave();return true;
