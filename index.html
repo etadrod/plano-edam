@@ -272,6 +272,27 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .tp-fold-n{font-size:12px;color:var(--muted);font-weight:500}
 .tp-fold .tp-table{border:0}
 .tp-fold .row{padding:8px 12px}
+.ev-sum{overflow-x:auto;border:1px solid var(--line)}
+.ev-sum:empty{display:none}
+.ev-sum table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+.ev-sum th,.ev-sum td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:middle}
+.ev-sum th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+.ev-sum td.n,.ev-sum th.n{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.ev-sum tr.cur td{background:var(--accent-soft)}
+.ev-sum button.ev-open{border:0;background:none;color:var(--accent);font:inherit;font-weight:600;text-align:left;cursor:pointer;padding:4px 0;min-height:32px}
+.ev-detail{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);border:1px solid var(--line);padding:12px}
+@media (min-width:1100px){.ev-detail{grid-template-columns:minmax(0,1.4fr) minmax(320px,1fr);align-items:start}}
+.ev-view{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ev-view iframe{width:100%;height:72vh;min-height:420px;border:1px solid var(--line);background:#fff}
+.ev-rub{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ev-crit{border:1px solid var(--line);padding:8px 10px;margin:0;min-width:0}
+.ev-crit legend{font-weight:600;font-size:14px;padding:0 4px}
+.ev-crit label{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);font-weight:400;padding:4px 0;cursor:pointer}
+.ev-crit input{width:18px;height:18px;margin-top:1px;accent-color:var(--accent);flex:0 0 auto}
+.ev-crit .pt{margin-left:auto;font-family:var(--font-mono);color:var(--muted);white-space:nowrap}
+.ev-total{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;background:var(--accent-soft);font-weight:600}
+.ev-total b{font-family:var(--font-mono);font-size:20px}
+.ev-rub textarea{min-height:110px;font-family:var(--font-body);font-size:14px;background:var(--surface)}
 .map-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
 .map-list li{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 10px}
 .map-list li+li{border-top:1px solid var(--line)}
@@ -708,6 +729,23 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       <div class="tp-field"><label for="mapFile">Imagen del plano (PNG o JPG)</label><input class="tp-in" type="file" id="mapFile" accept="image/png,image/jpeg,image/webp"></div>
       <button class="btn primary" type="button" id="mapAdd">Añadir plano</button>
     </div>
+
+    <h3 id="evTitle">Evaluación de planos del alumnado</h3>
+    <p class="empty" style="margin:0;font-size:13px">Carga los informes PDF que te han entregado (puedes seleccionar varios a la vez), ábrelos aquí y puntúa cada uno con la rúbrica. Las puntuaciones y los PDF se guardan en este navegador; descarga las calificaciones en CSV para abrirlas en Excel.</p>
+    <div class="row">
+      <label class="btn primary file-btn" for="evFiles">Cargar planos del alumnado (PDF)</label>
+      <input type="file" id="evFiles" class="sr-file" accept="application/pdf,.pdf" multiple>
+      <button class="btn" type="button" id="evCsv">Descargar calificaciones (CSV)</button>
+      <button class="btn danger" type="button" id="evClear">Vaciar evaluaciones</button>
+      <span class="empty" style="font-size:12px" id="evCount" aria-live="polite"></span>
+    </div>
+    <div class="confirm" id="evClearConfirm" hidden>
+      <span>¿Eliminar todos los planos cargados y sus puntuaciones? Esta acción no se puede deshacer.</span>
+      <button class="btn small danger" type="button" id="evClearYes">Eliminar todo</button>
+      <button class="btn small" type="button" id="evClearNo">Cancelar</button>
+    </div>
+    <div class="ev-sum" id="evSum"></div>
+    <div class="ev-detail" id="evDetail" hidden></div>
   </section>
 
   <p class="foot">Supuesto didáctico ficticio. No representa ninguna instalación real. Tu trabajo se guarda solo en este dispositivo y navegador.</p>
@@ -2369,6 +2407,133 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       applyLinkPack({name:name,catalog:cat,maps:maps,activeMap:active,presetsV:2,updatedAt:new Date().toISOString()});
     }catch(e){toast('No se pudo leer el enlace del docente');}
   }
+
+
+  /* ===== Evaluación de planos del alumnado (PDF + rúbrica) ===== */
+  var RUBRIC=[
+    {k:'a',t:'Realiza el recorrido de verificación',s:'Recorrido',lv:[['No lo realiza',0],['Sí lo realiza',1]]},
+    {k:'b',t:'Realiza el Checklist cumplimentado.',s:'Checklist',lv:[['No lo realiza',0],['Sí lo realiza',1]]},
+    {k:'c',t:'(c) Procedimiento de rondas coherente con el plan/instalación y correctamente ejecutado',s:'(c) Rondas',lv:[['No entrega o no realiza',0],['Recorrido inconexo; omite puntos críticos',1],['Recorrido válido con algunas lagunas',2],['Recorrido completo, frecuencias y puntos críticos bien definidos',3]]},
+    {k:'d',t:'(d) Seguimiento del estado de bienes y medios (Alarmas, accesos, etc) y propuestas de acción',s:'(d) Seguimiento',lv:[['No entrega o No verifica / no propone acciones',0],['Verifica parcialmente; propuestas vagas',1],['Verifica sistemáticamente y propone acciones adecuadas',2],['Verifica sistemáticamente y propone acciones mejoradas',3]]},
+    {k:'e',t:'(e) Visualización/registro de imágenes respetando LOPD (anotación de finalidad, mínima captación, custodia)',s:'(e) LOPD',lv:[['No entrega. Incumple LOPD o no registra',0],['Registra sin detallar finalidad o custodia',1],['Registra con finalidad y custodia descritas',2]]}
+  ];
+  var RUB_MAX=RUBRIC.reduce(function(a,c){return a+c.lv[c.lv.length-1][1];},0);
+  var EV_KEY='edam-evals-v1',evals=[],evCur=null,evMem={},evUrl=null,evDb=null;
+  try{var evRaw=localStorage.getItem(EV_KEY);if(evRaw){var evO=JSON.parse(evRaw);if(Array.isArray(evO))evals=evO;}}catch(e){}
+  function evSave(){try{localStorage.setItem(EV_KEY,JSON.stringify(evals));}catch(e){}}
+  function evDbOpen(){return new Promise(function(res){
+    if(evDb)return res(evDb);
+    try{var rq=indexedDB.open('edam-evals',1);rq.onupgradeneeded=function(){rq.result.createObjectStore('pdf');};
+      rq.onsuccess=function(){evDb=rq.result;res(evDb);};rq.onerror=function(){res(null);};}catch(e){res(null);}
+  });}
+  function evPut(id,blob){evMem[id]=blob;return evDbOpen().then(function(db){if(!db)return;return new Promise(function(r){try{var tx=db.transaction('pdf','readwrite');tx.objectStore('pdf').put(blob,id);tx.oncomplete=r;tx.onerror=r;}catch(e){r();}});});}
+  function evGet(id){if(evMem[id])return Promise.resolve(evMem[id]);return evDbOpen().then(function(db){if(!db)return null;return new Promise(function(r){try{var q=db.transaction('pdf').objectStore('pdf').get(id);q.onsuccess=function(){if(q.result)evMem[id]=q.result;r(q.result||null);};q.onerror=function(){r(null);};}catch(e){r(null);}});});}
+  function evDel(id){delete evMem[id];return evDbOpen().then(function(db){if(!db)return;try{db.transaction('pdf','readwrite').objectStore('pdf').delete(id);}catch(e){}});}
+  function evNameFrom(fn){
+    var b=fn.replace(/\.pdf$/i,''),m=/^EDAM_plano_(.+?)(?:_\d{8})?$/.exec(b);
+    var n=(m?m[1]:b).replace(/[-_]+/g,' ').trim();return n||fn;
+  }
+  function evTotal(e){var t=0,all=true;RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)all=false;else t+=v;});return {t:t,done:all};}
+  function fmtPt(v){return (Math.round(v*100)/100).toLocaleString('es-ES');}
+  function evRender(){
+    var n=evals.length,done=evals.filter(function(e){return evTotal(e).done;}).length;
+    $('evCount').textContent=n?(n+' planos cargados · '+done+' evaluados'):'Aún no hay planos cargados.';
+    $('evCsv').disabled=!n;$('evClear').disabled=!n;
+    var box=$('evSum');box.innerHTML='';
+    if(!n){$('evDetail').hidden=true;return;}
+    var tb=document.createElement('table'),h='<thead><tr><th scope="col">Alumno / equipo</th>';
+    RUBRIC.forEach(function(c){h+='<th scope="col" class="n">'+c.s+'</th>';});
+    h+='<th scope="col" class="n">Total /'+RUB_MAX+'</th><th scope="col">Estado</th></tr></thead>';tb.innerHTML=h;
+    var body=document.createElement('tbody');
+    evals.forEach(function(e){
+      var tr=document.createElement('tr');if(e.id===evCur)tr.className='cur';
+      var td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='ev-open';b.textContent=e.name||e.file;
+      b.setAttribute('aria-label','Evaluar el plano de '+(e.name||e.file));b.addEventListener('click',function(){evSelect(e.id,true);});td.appendChild(b);tr.appendChild(td);
+      RUBRIC.forEach(function(c){var d=document.createElement('td');d.className='n';var v=e.scores&&e.scores[c.k];d.textContent=v==null?'–':fmtPt(v);tr.appendChild(d);});
+      var tt=evTotal(e),dt=document.createElement('td');dt.className='n';dt.textContent=fmtPt(tt.t);tr.appendChild(dt);
+      var ds=document.createElement('td');ds.textContent=tt.done?'Evaluado':'Pendiente';ds.style.color=tt.done?'var(--accent)':'var(--muted)';tr.appendChild(ds);
+      body.appendChild(tr);
+    });
+    tb.appendChild(body);box.appendChild(tb);
+    if(evCur&&!evals.some(function(e){return e.id===evCur;}))evCur=null;
+    if(!evCur)$('evDetail').hidden=true;
+  }
+  function evSelect(id,scroll){
+    evCur=id;evRender();var e=evals.filter(function(x){return x.id===id;})[0];if(!e)return;
+    var d=$('evDetail');d.hidden=false;d.innerHTML='';
+    var view=document.createElement('div');view.className='ev-view';
+    var hd=document.createElement('div');hd.className='row';
+    var nf=document.createElement('div');nf.className='tp-field';nf.style.flex='1 1 220px';
+    var nl=document.createElement('label');nl.htmlFor='evName';nl.textContent='Alumno / equipo';var ni=document.createElement('input');ni.type='text';ni.className='tp-in';ni.id='evName';ni.value=e.name||'';
+    ni.addEventListener('input',function(){e.name=ni.value;evSave();var b=document.querySelector('#evSum tr.cur .ev-open');if(b)b.textContent=e.name||e.file;});
+    nf.appendChild(nl);nf.appendChild(ni);hd.appendChild(nf);
+    var op=document.createElement('a');op.className='btn small';op.textContent='Abrir en pestaña nueva';op.target='_blank';op.rel='noopener';op.hidden=true;hd.appendChild(op);
+    var dl=document.createElement('button');dl.type='button';dl.className='btn small danger';dl.textContent='Quitar este plano';
+    dl.addEventListener('click',function(){evals=evals.filter(function(x){return x.id!==e.id;});evDel(e.id);evSave();evCur=null;evRender();toast('Plano quitado: '+(e.name||e.file));});
+    hd.appendChild(dl);view.appendChild(hd);
+    var meta=document.createElement('p');meta.className='empty';meta.style.fontSize='12px';meta.style.margin='0';meta.textContent='Archivo: '+e.file;view.appendChild(meta);
+    var fr=document.createElement('iframe');fr.title='Plano PDF de '+(e.name||e.file);view.appendChild(fr);
+    var miss=document.createElement('p');miss.className='empty';miss.hidden=true;miss.textContent='Este PDF no está guardado en este navegador. Vuelve a cargarlo con «Cargar planos del alumnado» para verlo; sus puntuaciones se mantienen.';view.appendChild(miss);
+    d.appendChild(view);
+    evGet(e.id).then(function(blob){
+      if(evUrl){URL.revokeObjectURL(evUrl);evUrl=null;}
+      if(!blob){fr.hidden=true;miss.hidden=false;return;}
+      evUrl=URL.createObjectURL(blob);fr.src=evUrl;op.href=evUrl;op.hidden=false;
+    });
+    var rub=document.createElement('div');rub.className='ev-rub';
+    var tot=document.createElement('div');tot.className='ev-total';tot.innerHTML='<span>Puntuación total</span>';var tv=document.createElement('b');tot.appendChild(tv);
+    function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');}
+    e.scores=e.scores||{};
+    RUBRIC.forEach(function(c){
+      var fs=document.createElement('fieldset');fs.className='ev-crit';var lg=document.createElement('legend');lg.textContent=c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';fs.appendChild(lg);
+      c.lv.forEach(function(l,i){var lb=document.createElement('label'),r=document.createElement('input');r.type='radio';r.name='ev-'+c.k;r.value=l[1];r.checked=e.scores[c.k]===l[1];
+        r.addEventListener('change',function(){e.scores[c.k]=l[1];evSave();upTot();evRender();});
+        var sp=document.createElement('span');sp.textContent=l[0];var pt=document.createElement('span');pt.className='pt';pt.textContent=l[1]+(l[1]===1?' punto':' puntos');
+        lb.appendChild(r);lb.appendChild(sp);lb.appendChild(pt);fs.appendChild(lb);});
+      rub.appendChild(fs);
+    });
+    rub.appendChild(tot);upTot();
+    var of=document.createElement('div');of.className='tp-field';var ol=document.createElement('label');ol.htmlFor='evObs';ol.textContent='Valoración y mejoras (un párrafo)';
+    var ot=document.createElement('textarea');ot.id='evObs';ot.value=e.obs||'';ot.placeholder='Resumen de la evaluación y mejoras concretas…';ot.addEventListener('input',function(){e.obs=ot.value;evSave();});
+    of.appendChild(ol);of.appendChild(ot);rub.appendChild(of);
+    var nav=document.createElement('div');nav.className='row';var idx=evals.indexOf(e);
+    function navBtn(t,j){var b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=t;b.disabled=j<0||j>=evals.length;b.addEventListener('click',function(){evSelect(evals[j].id,true);});nav.appendChild(b);}
+    navBtn('← Anterior',idx-1);navBtn('Siguiente →',idx+1);rub.appendChild(nav);
+    d.appendChild(rub);
+    if(scroll)d.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  $('evFiles').addEventListener('change',function(){
+    var fs=Array.prototype.slice.call(this.files||[]);this.value='';
+    var pdfs=fs.filter(function(f){return /\.pdf$/i.test(f.name)||f.type==='application/pdf';});
+    if(!pdfs.length){toast('Elige archivos PDF');return;}
+    var added=0,replaced=0,first=null;
+    Promise.all(pdfs.map(function(f){
+      var ex=evals.filter(function(e){return e.file===f.name&&e.size===f.size;})[0];
+      if(ex){replaced++;first=first||ex.id;return evPut(ex.id,f);}
+      var e={id:'ev'+Date.now()+'_'+Math.random().toString(36).slice(2,7),file:f.name,size:f.size,name:evNameFrom(f.name),added:new Date().toISOString(),scores:{},obs:''};
+      evals.push(e);added++;first=first||e.id;return evPut(e.id,f);
+    })).then(function(){
+      evals.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','es');});
+      evSave();evRender();if(first)evSelect(first,true);
+      toast(added+' planos cargados'+(replaced?' · '+replaced+' ya estaban (se ha actualizado el PDF)':''));
+    });
+  });
+  function csvCell(v){v=String(v==null?'':v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  $('evCsv').addEventListener('click',async function(){
+    if(!evals.length)return;
+    var rows=[['Alumno / equipo','Archivo'].concat(RUBRIC.map(function(c){return c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';})).concat(['Total (sobre '+RUB_MAX+')','Estado','Valoración y mejoras'])];
+    evals.forEach(function(e){var t=evTotal(e);rows.push([e.name||'',e.file].concat(RUBRIC.map(function(c){var v=e.scores&&e.scores[c.k];return v==null?'':String(v).replace('.',',');})).concat([String(t.t).replace('.',','),t.done?'Evaluado':'Pendiente',e.obs||'']));});
+    var csv='﻿'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n');
+    var downloads=null;try{downloads=await downloadsP;}catch(e){}
+    if(!downloads){toast('La descarga no está disponible en esta vista');return;}
+    var d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+    try{await downloads.save({filename:'EDAM_calificaciones_'+stamp+'.csv',data:new Blob([csv],{type:'text/csv'})});toast('Calificaciones descargadas');}
+    catch(err){var c=err&&err.code;toast(c==='declined'?'Descarga cancelada':'No se pudo descargar el archivo');}
+  });
+  $('evClear').addEventListener('click',function(){$('evClearConfirm').hidden=false;$('evClearNo').focus();});
+  $('evClearNo').addEventListener('click',function(){$('evClearConfirm').hidden=true;});
+  $('evClearYes').addEventListener('click',function(){evals.forEach(function(e){evDel(e.id);});evals=[];evCur=null;evSave();$('evClearConfirm').hidden=true;evRender();toast('Evaluaciones eliminadas');});
+  evRender();
 
   /* Inicio */
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){try{applyMap(currentMap());renderMap();if(ed.open)edRender();}catch(e){}});
