@@ -304,7 +304,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .ev-md summary{font-size:13px;font-weight:600;color:var(--ink);min-height:36px}
 .ev-md pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto;font-family:var(--font-mono);font-size:12px;background:var(--bg);border:1px solid var(--line);padding:10px;margin:6px 0}
 .ev-sumrow{display:flex;gap:8px;align-items:stretch}
-.ev-sumrow textarea{flex:1 1 auto;min-height:96px}
+.ev-sumrow textarea{flex:1 1 auto;min-height:72px;overflow:hidden;resize:none}
 .ev-sumbtns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
 .ev-rub textarea{min-height:110px;font-family:var(--font-body);font-size:14px;background:var(--surface)}
 .map-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
@@ -2559,7 +2559,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     var rub=document.createElement('div');rub.className='ev-rub';
     var tot=document.createElement('div');tot.className='ev-total';tot.innerHTML='<span>Puntuación total</span>';var tv=document.createElement('b');tot.appendChild(tv);
     var sumT=null;
-    function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');if(sumT&&e.sumAuto!==false){e.sum=evSummary(e);sumT.value=e.sum;evSave();}}
+    function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');if(sumT&&e.sumAuto!==false){e.sum=evSummary(e);sumT.value=e.sum;evSave();}fitSum();}
+    function fitSum(){if(!sumT)return;sumT.style.height='auto';sumT.style.height=(sumT.scrollHeight+2)+'px';}
     e.scores=e.scores||{};
     var ab=document.createElement('div');ab.className='ev-autobar';
     if(e.auto){
@@ -2584,20 +2585,21 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     var sf=document.createElement('div');sf.className='tp-field';var sl=document.createElement('label');sl.htmlFor='evSumTxt';sl.textContent='Resumen para el alumno (segunda persona)';
     var srow=document.createElement('div');srow.className='ev-sumrow';
     sumT=document.createElement('textarea');sumT.id='evSumTxt';sumT.value=e.sum||'';sumT.placeholder='Se redacta solo al puntuar la rúbrica; puedes editarlo.';
-    sumT.addEventListener('input',function(){e.sum=sumT.value;e.sumAuto=false;evSave();});
+    sumT.addEventListener('input',function(){e.sum=sumT.value;e.sumAuto=false;evSave();fitSum();});
     var sb=document.createElement('div');sb.className='ev-sumbtns';
     var cp=document.createElement('button');cp.type='button';cp.className='btn primary small';cp.textContent='Copiar texto';
     cp.addEventListener('click',async function(){var ok=false;try{if(navigator.clipboard){await navigator.clipboard.writeText(sumT.value);ok=true;}}catch(_){}
       if(!ok){try{sumT.focus();sumT.select();ok=document.execCommand('copy');}catch(_){}}
       toast(ok?'Resumen copiado':'Selecciona el texto y cópialo manualmente');});
     var rg=document.createElement('button');rg.type='button';rg.className='btn small';rg.textContent='Regenerar';
-    rg.addEventListener('click',function(){e.sumAuto=true;e.sum=evSummary(e);sumT.value=e.sum;evSave();});
+    rg.addEventListener('click',function(){e.sumAuto=true;e.sum=evSummary(e);sumT.value=e.sum;evSave();fitSum();});
     sb.appendChild(cp);sb.appendChild(rg);srow.appendChild(sumT);srow.appendChild(sb);sf.appendChild(sl);sf.appendChild(srow);rub.appendChild(sf);
     upTot();
     var nav=document.createElement('div');nav.className='row';var idx=evals.indexOf(e);
     function navBtn(t,j){var b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=t;b.disabled=j<0||j>=evals.length;b.addEventListener('click',function(){evSelect(evals[j].id,true);});nav.appendChild(b);}
     navBtn('← Anterior',idx-1);navBtn('Siguiente →',idx+1);rub.appendChild(nav);
     d.appendChild(rub);
+    requestAnimationFrame(fitSum);
     if(scroll)d.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
@@ -2752,6 +2754,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       evSave();return true;
     }catch(err){try{console.warn('evAnalyze',err&&err.message||err);}catch(_){}e.analyzeError=true;evSave();return false;}
   }
+  window.addEventListener('resize',function(){var t=$('evSumTxt');if(t){t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px';}});
   function evAddFiles(fs){
     var pdfs=fs.filter(function(f){return /\.pdf$/i.test(f.name)||f.type==='application/pdf';});
     if(!pdfs.length){toast('Elige archivos PDF');return;}
