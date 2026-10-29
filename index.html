@@ -739,7 +739,10 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       <button class="btn primary" type="button" id="mapAdd">Añadir plano</button>
     </div>
 
-    <h3 id="evTitle">Evaluación de planos del alumnado</h3>
+  </section>
+
+  <section class="card teacher" id="evPanel" hidden aria-labelledby="evTitle">
+    <h2 id="evTitle">Evaluación de planos del alumnado</h2>
     <p class="empty" style="margin:0;font-size:13px">Carga los informes PDF que te han entregado (puedes seleccionar varios a la vez), ábrelos aquí y puntúa cada uno con la rúbrica. Las puntuaciones y los PDF se guardan en este navegador; descarga las calificaciones en CSV para abrirlas en Excel.</p>
     <label class="ev-drop" id="evDrop" for="evFiles">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
@@ -1784,7 +1787,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   var role=null,TEACHER_PW='0112';
   function enterRole(r){
     role=r;document.documentElement.setAttribute('data-role',r);
-    $('gate').hidden=true;$('teacherPanel').hidden=r!=='teacher';
+    $('gate').hidden=true;$('teacherPanel').hidden=r!=='teacher';$('evPanel').hidden=r!=='teacher';
     $('roleBadge').textContent=r==='teacher'?'Docente':'Alumno';
     if(r==='teacher')renderTeacher();
     toast(r==='teacher'?'Has entrado como docente':'Has entrado como alumno');
@@ -1801,7 +1804,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     if($('gatePw').value===TEACHER_PW){$('gatePw').value='';enterRole('teacher');}
     else{$('gateErr').textContent='Contraseña incorrecta. Inténtalo de nuevo.';$('gatePw').select();}
   });
-  $('switchRole').addEventListener('click',function(){$('teacherPanel').hidden=true;showGate();});
+  $('switchRole').addEventListener('click',function(){$('teacherPanel').hidden=true;$('evPanel').hidden=true;showGate();});
 
   /* Cargar paquete (alumno o docente) */
   function readJsonFile(file,cb){
