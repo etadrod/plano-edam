@@ -298,6 +298,11 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 .ev-crit .pt{margin-left:auto;font-family:var(--font-mono);color:var(--muted);white-space:nowrap}
 .ev-total{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;background:var(--accent-soft);font-weight:600}
 .ev-total b{font-family:var(--font-mono);font-size:20px}
+.ev-why{margin:0 0 4px;font-size:12px;color:var(--muted);line-height:1.4}
+.ev-autobar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ev-autobar .ev-hint{flex:1 1 240px;margin:0;font-size:13px;color:var(--muted)}
+.ev-md summary{font-size:13px;font-weight:600;color:var(--ink);min-height:36px}
+.ev-md pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto;font-family:var(--font-mono);font-size:12px;background:var(--bg);border:1px solid var(--line);padding:10px;margin:6px 0}
 .ev-sumrow{display:flex;gap:8px;align-items:stretch}
 .ev-sumrow textarea{flex:1 1 auto;min-height:96px}
 .ev-sumbtns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
@@ -743,7 +748,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 
   <section class="card teacher" id="evPanel" hidden aria-labelledby="evTitle">
     <h2 id="evTitle">Evaluación de planos del alumnado</h2>
-    <p class="empty" style="margin:0;font-size:13px">Carga los informes PDF que te han entregado (puedes seleccionar varios a la vez), ábrelos aquí y puntúa cada uno con la rúbrica. Las puntuaciones y los PDF se guardan en este navegador; descarga las calificaciones en CSV para abrirlas en Excel.</p>
+    <p class="empty" style="margin:0;font-size:13px">Suelta los informes PDF que te han entregado. La app lee cada uno, lo convierte a Markdown, propone la puntuación de la rúbrica y redacta un resumen para el alumno; tú revisas y ajustas. Las puntuaciones y los PDF se guardan en este navegador; descarga las calificaciones en CSV para abrirlas en Excel.</p>
     <label class="ev-drop" id="evDrop" for="evFiles">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
       <b>Arrastra aquí los PDF del alumnado</b>
@@ -1445,6 +1450,18 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function slug(s){return (s||'sin-equipo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'sin-equipo';}
   function pdfSafe(s){return String(s).replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/…/g,'...').replace(/→/g,'->');}
 
+  function mapZoneList(){
+    var m=currentMap(),out=[],seen={};
+    if(m.builtin){HIT_ZONES.forEach(function(z){if(!seen[z.k]){seen[z.k]=1;out.push(z.k+' · '+z.full);}});}
+    else if(m.shapes){m.shapes.forEach(function(s){if(s.t==='zone'&&s.L&&!seen[s.L]){seen[s.L]=1;out.push(s.L+' · '+(s.name||'Zona'));}});}
+    return out;
+  }
+  function mapHasSea(){var m=currentMap();if(m.builtin)return true;return !!(m.shapes&&m.shapes.some(function(s){return s.s==='sea';}));}
+  function edamDataB64(){
+    var d={v:1,team:state.team||'',map:currentMap().name,sea:mapHasSea(),zones:mapZoneList(),budget:budgetVal(),total:totalCost(),obs:state.obs||'',
+      m:state.markers.map(function(m){var e=byCode[m.code];return [m.code,LAYER_OF[m.code]||'',zoneText(m),m.note||'',e?e.price:0];})};
+    return btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  }
   async function buildPdf(){
     var J=window.jspdf&&window.jspdf.jsPDF;if(!J)throw new Error('lib');
     var img=await mapImage();
@@ -1578,6 +1595,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       doc.text(lines[k],12,ly2);ly2+=lh;
     }
     footer();
+    try{doc.setProperties({title:'Plano EDAM · '+team,subject:'EDAMDATA1:'+edamDataB64(),creator:'Plano EDAM',keywords:'Plano EDAM'});}catch(_){}
     return doc.output('arraybuffer');
   }
 
@@ -2434,23 +2452,36 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     {k:'r5',t:'5. Gestión del presupuesto',s:'5. Presupuesto',lv:[['No entrega o no realiza',0],['Supera el presupuesto sin justificarlo',0.25],['Se ajusta, sin criterio de prioridad',0.5],['Se ajusta y prioriza lo crítico',0.75],['Optimiza la inversión y justifica las alternativas descartadas',1]]},
     {k:'r6',t:'6. Justificación técnica y observaciones (RA2 d)',s:'6. Justificación',lv:[['No entrega o no realiza',0],['Sin justificaciones o genéricas',0.25],['Justifica algunos elementos',0.5],['Justifica todos los elementos con lenguaje técnico',0.75],['Además identifica carencias y propone mejoras con criterio',1]]}
   ];
+  /* Por nivel: [texto, positivo]. Los negativos son propuestas que siguen a «te animo a que…» */
   var EV_PHR={
-    r1:[['no presentas medios físicos ni electrónicos',0],['tus elementos son escasos o están mal ubicados',0],['debes mejorar la ubicación de los medios',0],['ubicas los medios con coherencia en las cuatro capas',1],['tu diseño de medios es completo y prioriza las zonas críticas',1]],
-    r2:[['no presentas cobertura de CCTV ni detección',0],['dejas puntos ciegos graves o cámaras mal orientadas',0],['quedan huecos en la cobertura de CCTV',0],['orientas bien el CCTV y la detección',1],['tu CCTV no deja puntos ciegos y respeta la protección de datos',1]],
-    r3:[['no presentas control de acceso',0],['dejas accesos sin control',0],['solo controlas el acceso principal',0],['controlas los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y las llaves',1]],
-    r4:[['no proteges el perímetro ni defines rondas',0],['el perímetro queda desprotegido o faltan rondas',0],['proteges el perímetro solo en parte',0],['proteges el perímetro y defines rondas',1],['resuelves muy bien rondas, iluminación y señalización',1]],
-    r5:[['no gestionas el presupuesto',0],['superas el presupuesto sin justificarlo',0],['te ajustas al presupuesto, pero sin priorizar',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas las alternativas',1]],
-    r6:[['no justificas los elementos',0],['tus justificaciones son genéricas',0],['justificas solo algunos elementos',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras',1]]
+    r1:[['incluyas medios físicos y electrónicos en el plano',0],['añadas más medios y los relaciones con cada riesgo',0],['afines la ubicación de algunos medios',0],['has ubicado los medios con coherencia en todas las capas',1],['tu diseño es completo y prioriza muy bien las zonas críticas',1]],
+    r2:[['incorpores cámaras y detectores',0],['revises los puntos ciegos y la orientación de las cámaras',0],['completes los huecos que aún deja tu CCTV',0],['has orientado muy bien el CCTV y la detección',1],['tu CCTV no deja puntos ciegos y cuida la protección de datos',1]],
+    r3:[['incluyas el control de acceso',0],['resuelvas los accesos que quedan sin control',0],['extiendas el control a todos los accesos de personas y vehículos',0],['controlas bien los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y la custodia de llaves',1]],
+    r4:[['protejas el perímetro y definas las rondas',0],['refuerces el perímetro y añadas rondas',0],['completes la protección del perímetro y las rondas',0],['proteges el perímetro y defines bien las rondas',1],['resuelves de maravilla rondas, iluminación y señalización',1]],
+    r5:[['expliques cómo gestionas el presupuesto',0],['ajustes la inversión al presupuesto o justifiques el exceso',0],['priorices lo crítico dentro del presupuesto',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas tus alternativas',1]],
+    r6:[['justifiques cada elemento que colocas',0],['concretes más tus justificaciones',0],['justifiques todos los elementos con lenguaje técnico',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras con criterio',1]]
   };
+  function evFirstName(e){
+    var n=String(e.name||'').trim();if(!n)return '';
+    if(/^(equipo|grupo)\b/i.test(n))return n;
+    return n.split(/\s+/)[0];
+  }
   function evSummary(e){
     var pos=[],neg=[],t=evTotal(e);
-    RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)return;var ix=-1;c.lv.forEach(function(l,i){if(l[1]===v)ix=i;});var ph=EV_PHR[c.k][ix];if(!ph)return;(ph[1]?pos:neg).push(ph[0]);});
+    RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)return;var ix=-1;c.lv.forEach(function(l,i){if(l[1]===v)ix=i;});var ph=EV_PHR[c.k][ix];if(!ph)return;
+      var r=v/c.lv[c.lv.length-1][1];(ph[1]?pos:neg).push({t:ph[0],r:r});});
     if(!pos.length&&!neg.length)return '';
-    function join(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];}
-    function cap(x){return x.charAt(0).toUpperCase()+x.slice(1);}
-    var out='Nota: '+fmtPt(t.t)+'/'+RUB_MAX+(t.done?'':' (provisional)')+'.';
-    if(pos.length)out+=' '+cap(join(pos))+'.';
-    if(neg.length)out+=' A mejorar: '+join(neg)+'.';
+    pos.sort(function(a,b){return b.r-a.r;});neg.sort(function(a,b){return a.r-b.r;});
+    function join(a){a=a.map(function(o){return o.t;});return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];}
+    var n=evFirstName(e),r=t.t/RUB_MAX,out;
+    if(r>=0.85)out='¡Excelente trabajo'+(n?', '+n:'')+'!';
+    else if(r>=0.65)out='¡Buen trabajo'+(n?', '+n:'')+'!';
+    else if(r>=0.5)out='¡Vas por buen camino'+(n?', '+n:'')+'!';
+    else out='¡Gracias por tu entrega'+(n?', '+n:'')+'!';
+    if(pos.length)out+=' Lo mejor de tu plano: '+join(pos.slice(0,3))+'.';
+    if(neg.length)out+=' Para el siguiente paso, te animo a que '+join(neg.slice(0,3))+'.';
+    if(neg.length&&r>=0.5)out+=' ¡Estás muy cerca!';else if(neg.length)out+=' ¡Con estos cambios lo vas a notar mucho!';
+    out+=' Nota: '+fmtPt(t.t)+'/'+RUB_MAX+(t.done?'':' (provisional)')+'.';
     return out;
   }
   var RUB_MAX=RUBRIC.reduce(function(a,c){return a+c.lv[c.lv.length-1][1];},0);
@@ -2510,6 +2541,14 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     hd.appendChild(dl);view.appendChild(hd);
     var meta=document.createElement('p');meta.className='empty';meta.style.fontSize='12px';meta.style.margin='0';meta.textContent='Archivo: '+e.file;view.appendChild(meta);
     var fr=document.createElement('iframe');fr.title='Plano PDF de '+(e.name||e.file);view.appendChild(fr);
+    if(e.md){
+      var mdd=document.createElement('details');mdd.className='ev-md';var mds=document.createElement('summary');mds.textContent='Contenido del PDF en Markdown';mdd.appendChild(mds);
+      var pre=document.createElement('pre');pre.textContent=e.md;mdd.appendChild(pre);
+      var mdb=document.createElement('button');mdb.type='button';mdb.className='btn small';mdb.textContent='Descargar .md';
+      mdb.addEventListener('click',async function(){var dlx=null;try{dlx=await downloadsP;}catch(_){}if(!dlx){toast('La descarga no está disponible en esta vista');return;}
+        try{await dlx.save({filename:(e.file||'plano').replace(/\.pdf$/i,'')+'.md',data:new Blob([e.md],{type:'text/markdown'})});toast('Markdown descargado');}catch(err){toast(err&&err.code==='declined'?'Descarga cancelada':'No se pudo descargar');}});
+      mdd.appendChild(mdb);view.appendChild(mdd);
+    }
     var miss=document.createElement('p');miss.className='empty';miss.hidden=true;miss.textContent='Este PDF no está guardado en este navegador. Vuelve a cargarlo con «Cargar planos del alumnado» para verlo; sus puntuaciones se mantienen.';view.appendChild(miss);
     d.appendChild(view);
     evGet(e.id).then(function(blob){
@@ -2522,8 +2561,19 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     var sumT=null;
     function upTot(){var t=evTotal(e);tv.textContent=fmtPt(t.t)+' / '+RUB_MAX+(t.done?'':' (incompleta)');if(sumT&&e.sumAuto!==false){e.sum=evSummary(e);sumT.value=e.sum;evSave();}}
     e.scores=e.scores||{};
+    var ab=document.createElement('div');ab.className='ev-autobar';
+    if(e.auto){
+      var at=document.createElement('p');at.className='ev-hint';at.textContent='Puntuación propuesta automáticamente a partir del '+(e.src==='datos'?'contenido del plano':'texto del PDF')+'. Revísala y ajusta lo que consideres.';ab.appendChild(at);
+      var rc=document.createElement('button');rc.type='button';rc.className='btn small';rc.textContent='Volver a la propuesta automática';
+      rc.addEventListener('click',function(){e.scores=JSON.parse(JSON.stringify(e.auto.scores));e.sumAuto=true;e.sum=evSummary(e);evSave();evSelect(e.id,false);});ab.appendChild(rc);
+    }else{
+      var an=document.createElement('button');an.type='button';an.className='btn small primary';an.textContent='Analizar este PDF y proponer puntuación';
+      an.addEventListener('click',async function(){an.disabled=true;an.textContent='Analizando…';var ok=await evAnalyze(e);if(!ok)toast('No se pudo leer el PDF: puntúalo a mano');evRender();evSelect(e.id,false);});ab.appendChild(an);
+    }
+    rub.appendChild(ab);
     RUBRIC.forEach(function(c){
       var fs=document.createElement('fieldset');fs.className='ev-crit';var lg=document.createElement('legend');lg.textContent=c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';fs.appendChild(lg);
+      if(e.auto&&e.auto.why&&e.auto.why[c.k]){var wy=document.createElement('p');wy.className='ev-why';wy.textContent='Detectado: '+e.auto.why[c.k]+(e.auto.scores[c.k]!=null?' Propuesta: '+fmtPt(e.auto.scores[c.k])+'.':'');fs.appendChild(wy);}
       c.lv.forEach(function(l,i){var lb=document.createElement('label'),r=document.createElement('input');r.type='radio';r.name='ev-'+c.k;r.value=l[1];r.checked=e.scores[c.k]===l[1];
         r.addEventListener('change',function(){e.scores[c.k]=l[1];evSave();upTot();evRender();});
         var sp=document.createElement('span');sp.textContent=l[0];var pt=document.createElement('span');pt.className='pt';pt.textContent=fmtPt(l[1])+(l[1]===1?' punto':' puntos');
@@ -2544,14 +2594,163 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     rg.addEventListener('click',function(){e.sumAuto=true;e.sum=evSummary(e);sumT.value=e.sum;evSave();});
     sb.appendChild(cp);sb.appendChild(rg);srow.appendChild(sumT);srow.appendChild(sb);sf.appendChild(sl);sf.appendChild(srow);rub.appendChild(sf);
     upTot();
-    var of=document.createElement('div');of.className='tp-field';var ol=document.createElement('label');ol.htmlFor='evObs';ol.textContent='Valoración y mejoras (un párrafo)';
-    var ot=document.createElement('textarea');ot.id='evObs';ot.value=e.obs||'';ot.placeholder='Resumen de la evaluación y mejoras concretas…';ot.addEventListener('input',function(){e.obs=ot.value;evSave();});
-    of.appendChild(ol);of.appendChild(ot);rub.appendChild(of);
     var nav=document.createElement('div');nav.className='row';var idx=evals.indexOf(e);
     function navBtn(t,j){var b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=t;b.disabled=j<0||j>=evals.length;b.addEventListener('click',function(){evSelect(evals[j].id,true);});nav.appendChild(b);}
     navBtn('← Anterior',idx-1);navBtn('Siguiente →',idx+1);rub.appendChild(nav);
     d.appendChild(rub);
     if(scroll)d.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  /* --- Análisis automático de los PDF: texto → Markdown y propuesta según la rúbrica --- */
+  var PDFJS_V='3.11.174',PDFJS_BASE='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFJS_V+'/';
+  var pdfjsP=null;
+  function loadPdfjs(){
+    if(pdfjsP)return pdfjsP;
+    pdfjsP=new Promise(function(res,rej){
+      if(window.pdfjsLib)return res(window.pdfjsLib);
+      var sc=document.createElement('script');sc.src=PDFJS_BASE+'pdf.min.js';
+      sc.onload=async function(){var lib=window.pdfjsLib;if(!lib)return rej(new Error('pdfjs'));
+        try{var t=await (await fetch(PDFJS_BASE+'pdf.worker.min.js')).text();lib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}));}
+        catch(_){lib.GlobalWorkerOptions.workerSrc=PDFJS_BASE+'pdf.worker.min.js';}
+        res(lib);};
+      sc.onerror=function(){pdfjsP=null;rej(new Error('pdfjs'));};document.head.appendChild(sc);
+    });
+    return pdfjsP;
+  }
+  async function pdfRead(blob){
+    var lib=await loadPdfjs(),buf=await blob.arrayBuffer();
+    var pdf=await lib.getDocument({data:new Uint8Array(buf)}).promise,info={};
+    try{info=(await pdf.getMetadata()).info||{};}catch(_){}
+    var pages=[];
+    for(var i=1;i<=pdf.numPages;i++){
+      var tc=await (await pdf.getPage(i)).getTextContent(),rows={};
+      tc.items.forEach(function(it){if(!it.str||!it.str.trim())return;var y=Math.round(it.transform[5]/3)*3;(rows[y]=rows[y]||[]).push({x:it.transform[4],s:it.str});});
+      var lines=Object.keys(rows).map(Number).sort(function(a,b){return b-a;}).map(function(y){return rows[y].sort(function(a,b){return a.x-b.x;}).map(function(o){return o.s.trim();}).join('  ');});
+      pages.push(lines);
+    }
+    var data=null,sub=String(info.Subject||'');
+    if(sub.indexOf('EDAMDATA1:')===0){try{data=JSON.parse(decodeURIComponent(escape(atob(sub.slice(10)))));}catch(_){data=null;}}
+    return {data:data,pages:pages};
+  }
+  function parseEur(t){var v=Number(String(t||'').replace(/[^\d,]/g,'').replace(',','.'));return isFinite(v)?v:0;}
+  /* Métricas comunes a partir de los datos incrustados o, si no los hay, del texto */
+  function evMetrics(rd){
+    var M={count:{},n:0,layers:{},zones:null,zonesHit:{},camZones:{},accZones:{},notes:null,obs:'',budget:0,total:0,sea:true,team:'',map:'',costByLayer:{},src:''};
+    function add(code,k,layer){M.count[code]=(M.count[code]||0)+k;M.n+=k;var L=layer||LAYER_OF[code]||'';if(L&&k>0)M.layers[L]=1;}
+    if(rd.data){
+      var d=rd.data;M.src='datos';M.team=d.team||'';M.map=d.map||'';M.sea=d.sea!==false;M.budget=Number(d.budget)||0;M.total=Number(d.total)||0;M.obs=d.obs||'';
+      M.zones=(d.zones||[]).map(function(z){return String(z).split(' · ')[0];});
+      var withNote=0;
+      (d.m||[]).forEach(function(r){var code=r[0],layer=r[1],zone=String(r[2]||''),note=String(r[3]||''),price=Number(r[4])||0;
+        add(code,1,layer);M.costByLayer[layer]=(M.costByLayer[layer]||0)+price;
+        var zl=/^([A-Z]{1,2}) · /.exec(zone);zl=zl?zl[1]:null;
+        if(zl){M.zonesHit[zl]=1;if(code==='CF'||code==='CP')M.camZones[zl]=1;if(/^(TE|BA|BO|LA|CE|AD)$/.test(code))M.accZones[zl]=1;}
+        if(note.trim().length>=8)withNote++;});
+      M.notes=M.n?withNote/M.n:0;
+    }else{
+      M.src='texto';var all=[].concat.apply([],rd.pages),txt=all.join('\n');
+      var tm=/Equipo \/ alumno:\s*(.+?)\s{2,}Fecha/.exec(txt)||/Equipo \/ alumno:\s*(.+)/.exec(txt);if(tm)M.team=tm[1].trim();
+      var mp=/Plano de implantaci[oó]n de medidas de seguridad\s*·\s*(.+)/.exec(txt);if(mp)M.map=mp[1].trim();
+      M.sea=!/almacenamiento qu[ií]mico|centro de datos/i.test(M.map||'');
+      var it=/Inversi[oó]n total:\s*([\d\.\,]+)/.exec(txt);if(it)M.total=parseEur(it[1]);
+      var bu=/Presupuesto:\s*([\d\.\,]+)/.exec(txt);if(bu)M.budget=parseEur(bu[1]);
+      var seen={};
+      all.forEach(function(l){var m=/^([A-Z]{2,4})\s{1,}.+?\s+x(\d+)\s*$/.exec(l);if(m&&byCode[m[1]]&&!seen[m[1]]){seen[m[1]]=1;add(m[1],Number(m[2]));}});
+      var oi=all.findIndex(function(l){return /^Observaciones finales/.test(l);});
+      if(oi>=0){M.obs=all.slice(oi+1).filter(function(l){return !/^Supuesto did[aá]ctico|^P[aá]gina \d|^M[OÓ]DULO 1679|^EDAM ·|^Equipo \/ alumno/.test(l);}).join(' ').replace(/^Sin observaciones\.?$/,'').trim();}
+    }
+    return M;
+  }
+  function evAuto(M){
+    var C=function(){var t=0;for(var i=0;i<arguments.length;i++)t+=M.count[arguments[i]]||0;return t;};
+    var S={},W={},nl=Object.keys(M.layers).length,zt=M.zones&&M.zones.length?M.zones.length:0;
+    var zc=zt?Object.keys(M.zonesHit).length/zt:null,cz=zt?Object.keys(M.camZones).length/zt:null;
+    var txt=(M.obs||'')+' '+(M.src==='datos'?'':''),obsL=(M.obs||'').trim().length;
+    var notesTxt='';
+    function has(re){return re.test(M.obs||'')||re.test(M.allNotes||'');}
+    function pct(x){return Math.round(x*100)+' %';}
+    /* 1. Medios */
+    if(!M.n){S.r1=0;W.r1='No hay elementos colocados.';}
+    else{
+      if(nl<=2||M.n<5)S.r1=0.5;else if(nl<4)S.r1=1;
+      else if((zc!=null&&zc>=0.6&&nl>=5&&M.n>=12)||(zc==null&&nl>=5&&M.n>=20))S.r1=2;else S.r1=1.5;
+      W.r1=M.n+' elementos en '+nl+' de 5 capas'+(zc!=null?' · '+Object.keys(M.zonesHit).length+' de '+zt+' zonas cubiertas':'')+'.';
+    }
+    /* 2. CCTV y detección */
+    var cams=C('CF','CP'),det=C('DV','CM'),dp=/protecci[oó]n de datos|lopd|rgpd|privacidad|enmascar|m[aá]scara de privacidad/i;
+    if(!cams&&!det){S.r2=0;W.r2='Sin cámaras ni detectores.';}
+    else{
+      if(cz!=null){if(cams<=2||cz<0.2)S.r2=0.5;else if(cz<0.45)S.r2=1;else if(cz<0.75||!det)S.r2=1.5;else S.r2=has(dp)?2:1.5;}
+      else{if(cams<=2)S.r2=0.5;else if(cams<6||!det)S.r2=1;else S.r2=has(dp)?2:1.5;}
+      W.r2=cams+' cámaras y '+det+' detectores'+(cz!=null?' · cámaras en '+Object.keys(M.camZones).length+' de '+zt+' zonas':'')+(has(dp)?' · menciona la protección de datos':'')+'.';
+    }
+    /* 3. Accesos */
+    var ped=C('TE','LA','AD'),veh=C('BA','BO'),ce=C('CE'),acc=ped+veh+ce,az=Object.keys(M.accZones).length;
+    var extra=/secundari|llave|scada|restringid|reactivo|emergencia/i;
+    if(!acc){S.r3=0;W.r3='Sin elementos de control de acceso.';}
+    else{
+      if(acc<=1)S.r3=0.5;else if(!ped||!veh)S.r3=1;
+      else if((ce>0||C('LA')>=2)&&(az>=3||has(extra)))S.r3=2;else S.r3=1.5;
+      W.r3=ped+' de control peatonal, '+veh+' de vehículos y '+ce+' cerraduras'+(M.zones?' · en '+az+' zonas':'')+'.';
+    }
+    /* 4. Perímetro, iluminación, señalización y rondas */
+    var dpp=C('DP'),by=C('BY'),pr=C('PR'),il=C('IL'),se=C('SE');
+    if(!(dpp+by+pr+il+se)){S.r4=0;W.r4='Sin elementos de perímetro, iluminación, señalización ni rondas.';}
+    else{
+      if(!(dpp+by))S.r4=0.5;else if((M.sea&&!by)||pr<2)S.r4=1;else if(pr>=4&&il>=2&&se>=1)S.r4=2;else S.r4=1.5;
+      W.r4=dpp+' barreras IR, '+by+' boyas, '+pr+' puntos de ronda, '+il+' luminarias y '+se+' señales'+(M.sea?' (plano con frente marítimo)':'')+'.';
+    }
+    /* 5. Presupuesto */
+    var bt=/presupuest|sobrecoste|supera|exceso/i,opt=/alternativ|descart|optimiz|prioriz/i;
+    if(!M.n){S.r5=0;W.r5='Sin inversión que valorar.';}
+    else if(!M.budget){S.r5=0.5;W.r5='Inversión '+eur(M.total)+' sin presupuesto indicado: revisa este criterio.';}
+    else if(M.total>M.budget){S.r5=has(bt)?0.5:0.25;W.r5='Inversión '+eur(M.total)+' sobre un presupuesto de '+eur(M.budget)+(has(bt)?' (lo justifica)':'')+'.';}
+    else{
+      var crit=M.total?((M.costByLayer.vid||0)+(M.costByLayer.acc||0))/M.total:null;
+      S.r5=has(opt)?1:(crit==null||crit>=0.4?0.75:0.5);
+      W.r5='Inversión '+eur(M.total)+' de '+eur(M.budget)+' ('+pct(M.total/M.budget)+')'+(crit!=null?' · '+pct(crit)+' en accesos y CCTV':'')+(has(opt)?' · justifica alternativas':'')+'.';
+    }
+    /* 6. Justificación */
+    var mej=/carencia|mejor|propon|recomend|d[eé]ficit|deficien|insuficien/i;
+    if(!M.n){S.r6=0;W.r6='Sin elementos que justificar.';}
+    else if(M.notes!=null){
+      var r=M.notes;
+      if(r<0.2&&obsL<60)S.r6=0.25;else if(r<0.6)S.r6=0.5;else if(r>=0.8&&has(mej)&&obsL>=120)S.r6=1;else S.r6=0.75;
+      W.r6=pct(r)+' de los elementos con justificación · observaciones de '+obsL+' caracteres'+(has(mej)?' · propone mejoras':'')+'.';
+    }else{
+      if(obsL<40)S.r6=0.25;else if(obsL<200)S.r6=0.5;else S.r6=has(mej)&&obsL>=300?1:0.75;
+      W.r6='Observaciones de '+obsL+' caracteres (PDF sin datos del inventario: revisa este criterio).';
+    }
+    return {scores:S,why:W};
+  }
+  function evMarkdown(rd,M,e){
+    var L=[];
+    L.push('# Plano EDAM · '+((M.team&&!/sin indicar/i.test(M.team))?M.team:(e.name||e.file)));L.push('');
+    L.push('- **Archivo:** '+e.file);if(M.map)L.push('- **Plano:** '+M.map);
+    L.push('- **Inversión total:** '+eur(M.total)+' · **Presupuesto:** '+(M.budget?eur(M.budget):'sin indicar'));
+    L.push('- **Origen de los datos:** '+(M.src==='datos'?'datos del plano incluidos en el PDF':'texto del PDF'));L.push('');
+    if(rd.data){
+      L.push('## Inventario');L.push('');L.push('| N.º | Código | Elemento | Capa | Zona | Justificación |');L.push('| --- | --- | --- | --- | --- | --- |');
+      (rd.data.m||[]).forEach(function(r,i){var e2=byCode[r[0]];var lay=LAYERS.filter(function(x){return x.k===r[1];})[0];
+        L.push('| '+(i+1)+' | '+r[0]+' | '+(e2?e2.name:r[0])+' | '+(lay?lay.t:r[1])+' | '+String(r[2]||'').replace(/\|/g,'/')+' | '+(String(r[3]||'').replace(/\|/g,'/').replace(/\n/g,' ')||'–')+' |');});
+      L.push('');L.push('## Observaciones finales');L.push('');L.push((rd.data.obs||'').trim()||'Sin observaciones.');
+    }else{
+      rd.pages.forEach(function(p,i){L.push('## Página '+(i+1));L.push('');p.forEach(function(l){L.push(l);});L.push('');});
+    }
+    return L.join('\n');
+  }
+  async function evAnalyze(e){
+    var blob=await evGet(e.id);if(!blob)return false;
+    try{
+      var rd=await pdfRead(blob),M=evMetrics(rd);
+      M.allNotes=rd.data?(rd.data.m||[]).map(function(r){return r[3]||'';}).join(' '):'';
+      var A=evAuto(M);
+      e.md=evMarkdown(rd,M,e);e.auto=A;e.analyzed=true;e.src=M.src;
+      if(M.team&&!/^\[?sin indicar\]?$/i.test(M.team)&&(!e.name||e.name===evNameFrom(e.file)))e.name=M.team;
+      if(!e.scores||!Object.keys(e.scores).length){e.scores=JSON.parse(JSON.stringify(A.scores));e.sumAuto=true;}
+      if(e.sumAuto!==false)e.sum=evSummary(e);
+      evSave();return true;
+    }catch(err){try{console.warn('evAnalyze',err&&err.message||err);}catch(_){}e.analyzeError=true;evSave();return false;}
   }
   function evAddFiles(fs){
     var pdfs=fs.filter(function(f){return /\.pdf$/i.test(f.name)||f.type==='application/pdf';});
@@ -2563,9 +2762,16 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       var e={id:'ev'+Date.now()+'_'+Math.random().toString(36).slice(2,7),file:f.name,size:f.size,name:evNameFrom(f.name),added:new Date().toISOString(),scores:{},obs:''};
       evals.push(e);added++;first=first||e.id;return evPut(e.id,f);
     })).then(function(){
-      evals.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','es');});
-      evSave();evRender();if(first)evSelect(first,true);
-      toast(added+' planos cargados'+(replaced?' · '+replaced+' ya estaban (se ha actualizado el PDF)':''));
+      evSave();evRender();
+      toast('Leyendo '+pdfs.length+' PDF y proponiendo la puntuación…');
+      var ids=evals.filter(function(e){return pdfs.some(function(f){return f.name===e.file&&f.size===e.size;});});
+      var ok=0,fail=0;
+      (async function(){
+        for(var i=0;i<ids.length;i++){if(await evAnalyze(ids[i]))ok++;else fail++;}
+        evals.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','es');});
+        evSave();evRender();if(first)evSelect(first,true);
+        toast(added+' planos cargados'+(replaced?' · '+replaced+' actualizados':'')+' · '+ok+' con propuesta automática'+(fail?' · '+fail+' no se pudieron leer (puntúalos a mano)':''));
+      })();
     });
   }
   $('evFiles').addEventListener('change',function(){var fs=Array.prototype.slice.call(this.files||[]);this.value='';evAddFiles(fs);});
@@ -2584,8 +2790,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function csvCell(v){v=String(v==null?'':v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
   $('evCsv').addEventListener('click',async function(){
     if(!evals.length)return;
-    var rows=[['Alumno / equipo','Archivo'].concat(RUBRIC.map(function(c){return c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';})).concat(['Total (sobre '+RUB_MAX+')','Estado','Resumen para el alumno','Valoración y mejoras'])];
-    evals.forEach(function(e){var t=evTotal(e);rows.push([e.name||'',e.file].concat(RUBRIC.map(function(c){var v=e.scores&&e.scores[c.k];return v==null?'':String(v).replace('.',',');})).concat([String(t.t).replace('.',','),t.done?'Evaluado':'Pendiente',e.sum||'',e.obs||'']));});
+    var rows=[['Alumno / equipo','Archivo'].concat(RUBRIC.map(function(c){return c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';})).concat(['Total (sobre '+RUB_MAX+')','Estado','Resumen para el alumno'])];
+    evals.forEach(function(e){var t=evTotal(e);rows.push([e.name||'',e.file].concat(RUBRIC.map(function(c){var v=e.scores&&e.scores[c.k];return v==null?'':String(v).replace('.',',');})).concat([String(t.t).replace('.',','),t.done?'Evaluado':'Pendiente',e.sum||'']));});
     var csv='﻿'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n');
     var downloads=null;try{downloads=await downloadsP;}catch(e){}
     if(!downloads){toast('La descarga no está disponible en esta vista');return;}
