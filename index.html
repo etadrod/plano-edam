@@ -2452,14 +2452,14 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     {k:'r5',t:'5. Gestión del presupuesto',s:'5. Presupuesto',lv:[['No entrega o no realiza',0],['Supera el presupuesto sin justificarlo',0.25],['Se ajusta, sin criterio de prioridad',0.5],['Se ajusta y prioriza lo crítico',0.75],['Optimiza la inversión y justifica las alternativas descartadas',1]]},
     {k:'r6',t:'6. Justificación técnica y observaciones (RA2 d)',s:'6. Justificación',lv:[['No entrega o no realiza',0],['Sin justificaciones o genéricas',0.25],['Justifica algunos elementos',0.5],['Justifica todos los elementos con lenguaje técnico',0.75],['Además identifica carencias y propone mejoras con criterio',1]]}
   ];
-  /* Por nivel: [texto, positivo]. Los negativos son propuestas que siguen a «te animo a que…» */
+  /* Por nivel: [texto, positivo]. Los negativos van en infinitivo tras «Sin embargo faltó…» */
   var EV_PHR={
-    r1:[['incluyas medios físicos y electrónicos en el plano',0],['añadas más medios y los relaciones con cada riesgo',0],['afines la ubicación de algunos medios',0],['has ubicado los medios con coherencia en todas las capas',1],['tu diseño es completo y prioriza muy bien las zonas críticas',1]],
-    r2:[['incorpores cámaras y detectores',0],['revises los puntos ciegos y la orientación de las cámaras',0],['completes los huecos que aún deja tu CCTV',0],['has orientado muy bien el CCTV y la detección',1],['tu CCTV no deja puntos ciegos y cuida la protección de datos',1]],
-    r3:[['incluyas el control de acceso',0],['resuelvas los accesos que quedan sin control',0],['extiendas el control a todos los accesos de personas y vehículos',0],['controlas bien los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y la custodia de llaves',1]],
-    r4:[['protejas el perímetro y definas las rondas',0],['refuerces el perímetro y añadas rondas',0],['completes la protección del perímetro y las rondas',0],['proteges el perímetro y defines bien las rondas',1],['resuelves de maravilla rondas, iluminación y señalización',1]],
-    r5:[['expliques cómo gestionas el presupuesto',0],['ajustes la inversión al presupuesto o justifiques el exceso',0],['priorices lo crítico dentro del presupuesto',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas tus alternativas',1]],
-    r6:[['justifiques cada elemento que colocas',0],['concretes más tus justificaciones',0],['justifiques todos los elementos con lenguaje técnico',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras con criterio',1]]
+    r1:[['incluir medios físicos y electrónicos en el plano',0],['añadir más medios y relacionarlos con cada riesgo',0],['afinar la ubicación de algunos medios',0],['has ubicado los medios con coherencia en todas las capas',1],['tu diseño es completo y prioriza muy bien las zonas críticas',1]],
+    r2:[['incorporar cámaras y detectores',0],['revisar los puntos ciegos y la orientación de las cámaras',0],['completar los huecos que deja tu CCTV',0],['has orientado muy bien el CCTV y la detección',1],['tu CCTV no deja puntos ciegos y cuida la protección de datos',1]],
+    r3:[['incluir el control de acceso',0],['resolver los accesos que quedan sin control',0],['extender el control a todos los accesos de personas y vehículos',0],['controlas bien los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y la custodia de llaves',1]],
+    r4:[['proteger el perímetro y definir las rondas',0],['reforzar el perímetro y añadir rondas',0],['completar la protección del perímetro y las rondas',0],['proteges el perímetro y defines bien las rondas',1],['resuelves de maravilla rondas, iluminación y señalización',1]],
+    r5:[['explicar cómo gestionas el presupuesto',0],['ajustar la inversión al presupuesto o justificar el exceso',0],['priorizar lo crítico dentro del presupuesto',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas tus alternativas',1]],
+    r6:[['justificar cada elemento que colocas',0],['concretar más tus justificaciones',0],['justificar todos los elementos con lenguaje técnico',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras con criterio',1]]
   };
   function evFirstName(e){
     var n=String(e.name||'').trim();if(!n)return '';
@@ -2479,8 +2479,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     else if(r>=0.5)out='¡Vas por buen camino'+(n?', '+n:'')+'!';
     else out='¡Gracias por tu entrega'+(n?', '+n:'')+'!';
     if(pos.length)out+=' Lo mejor de tu plano: '+join(pos.slice(0,3))+'.';
-    if(neg.length)out+=' Para el siguiente paso, te animo a que '+join(neg.slice(0,3))+'.';
-    if(neg.length&&r>=0.5)out+=' ¡Estás muy cerca!';else if(neg.length)out+=' ¡Con estos cambios lo vas a notar mucho!';
+    if(neg.length)out+=(pos.length?' Sin embargo faltó ':' Faltó ')+join(neg.slice(0,3))+'.';
+    if(neg.length&&r>=0.5)out+=' ¡Has estado muy cerca!';else if(neg.length)out+=' ¡Con estos ajustes lo vas a notar mucho!';
     out+=' Nota: '+fmtPt(t.t)+'/'+RUB_MAX+(t.done?'':' (provisional)')+'.';
     return out;
   }
