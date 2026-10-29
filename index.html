@@ -2497,10 +2497,21 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   function evPut(id,blob){evMem[id]=blob;return evDbOpen().then(function(db){if(!db)return;return new Promise(function(r){try{var tx=db.transaction('pdf','readwrite');tx.objectStore('pdf').put(blob,id);tx.oncomplete=r;tx.onerror=r;}catch(e){r();}});});}
   function evGet(id){if(evMem[id])return Promise.resolve(evMem[id]);return evDbOpen().then(function(db){if(!db)return null;return new Promise(function(r){try{var q=db.transaction('pdf').objectStore('pdf').get(id);q.onsuccess=function(){if(q.result)evMem[id]=q.result;r(q.result||null);};q.onerror=function(){r(null);};}catch(e){r(null);}});});}
   function evDel(id){delete evMem[id];return evDbOpen().then(function(db){if(!db)return;try{db.transaction('pdf','readwrite').objectStore('pdf').delete(id);}catch(e){}});}
-  function evNameFrom(fn){
-    var b=fn.replace(/\.pdf$/i,''),m=/^EDAM_plano_(.+?)(?:_\d{8})?$/.exec(b);
-    var n=(m?m[1]:b).replace(/[-_]+/g,' ').trim();return n||fn;
+  /* Deja solo nombre y apellidos: quita prefijos, fechas, números, grupos, extensiones y restos de Moodle/Classroom */
+  var EV_STOP=/^(edam|plano|planos|informe|entrega|tarea|actividad|pdf|copia|final|definitivo|version|versión|v|equipo|grupo|alumno|alumna|alumnado|curso|cfgm|seguridad|vib|aev|ra|sin|indicar|vigilancia|proteccion|protección|modulo|módulo)$/i;
+  function evCleanName(t){
+    t=String(t||'').replace(/\.pdf$/i,'');
+    var md=/^(.+?)_\d+_assignsubmission/i.exec(t);if(md)t=md[1];
+    t=t.replace(/[_\-–—·\.,;:()\[\]{}\/\\|+#*"'«»]+/g,' ');
+    var w=t.split(/\s+/).filter(function(x){return x&&!/\d/.test(x)&&!EV_STOP.test(x)&&/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+$/.test(x);});
+    var keep=[];w.forEach(function(x,k){var low=x.toLowerCase();if(k>0&&/^(de|del|la|las|los|y)$/.test(low))keep.push(low);else keep.push(x);});
+    while(keep.length&&/^(de|del|la|las|los|el|y)$/i.test(keep[0]))keep.shift();while(keep.length&&/^(de|del|la|las|los|el|y)$/i.test(keep[keep.length-1]))keep.pop();
+    var n=keep.join(' ').trim();
+    var big=keep.filter(function(x){return !/^(de|del|la|las|los|el|y)$/.test(x);});
+    if(big.length&&big.every(function(x){return x.length>1&&x===x.toUpperCase();}))n=keep.map(function(x){return /^(de|del|la|las|los|el|y)$/.test(x)?x:x.charAt(0)+x.slice(1).toLowerCase();}).join(' ');
+    return n;
   }
+  function evNameFrom(fn){return evCleanName(fn)||String(fn).replace(/\.pdf$/i,'');}
   function evTotal(e){var t=0,all=true;RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)all=false;else t+=v;});return {t:t,done:all};}
   function fmtPt(v){return (Math.round(v*100)/100).toLocaleString('es-ES');}
   function evRender(){
@@ -2756,7 +2767,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       M.allNotes=rd.data?(rd.data.m||[]).map(function(r){return r[3]||'';}).join(' '):'';
       var A=evAuto(M);
       e.md=evMarkdown(rd,M,e);e.auto=A;e.analyzed=true;e.src=M.src;
-      if(M.team&&!/^\[?sin indicar\]?$/i.test(M.team)&&(!e.name||e.name===evNameFrom(e.file)))e.name=M.team;
+      var cleanT=evCleanName(M.team);if(cleanT&&(!e.name||e.name===evNameFrom(e.file)))e.name=cleanT;
       if(!e.scores||!Object.keys(e.scores).length){e.scores=JSON.parse(JSON.stringify(A.scores));e.sumAuto=true;}
       if(e.sumAuto!==false)e.sum=evSummary(e);
       evSave();return true;
