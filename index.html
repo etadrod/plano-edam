@@ -2414,22 +2414,24 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
 
   /* ===== Evaluación de planos del alumnado (PDF + rúbrica) ===== */
   var RUBRIC=[
-    {k:'a',t:'Realiza el recorrido de verificación',s:'Recorrido',lv:[['No lo realiza',0],['Sí lo realiza',1]]},
-    {k:'b',t:'Realiza el Checklist cumplimentado.',s:'Checklist',lv:[['No lo realiza',0],['Sí lo realiza',1]]},
-    {k:'c',t:'(c) Procedimiento de rondas coherente con el plan/instalación y correctamente ejecutado',s:'(c) Rondas',lv:[['No entrega o no realiza',0],['Recorrido inconexo; omite puntos críticos',1],['Recorrido válido con algunas lagunas',2],['Recorrido completo, frecuencias y puntos críticos bien definidos',3]]},
-    {k:'d',t:'(d) Seguimiento del estado de bienes y medios (Alarmas, accesos, etc) y propuestas de acción',s:'(d) Seguimiento',lv:[['No entrega o No verifica / no propone acciones',0],['Verifica parcialmente; propuestas vagas',1],['Verifica sistemáticamente y propone acciones adecuadas',2],['Verifica sistemáticamente y propone acciones mejoradas',3]]},
-    {k:'e',t:'(e) Visualización/registro de imágenes respetando LOPD (anotación de finalidad, mínima captación, custodia)',s:'(e) LOPD',lv:[['No entrega. Incumple LOPD o no registra',0],['Registra sin detallar finalidad o custodia',1],['Registra con finalidad y custodia descritas',2]]}
+    {k:'r1',t:'1. Selección y ubicación de medios físicos y electrónicos (RA1 a, f)',s:'1. Medios',lv:[['No entrega o no realiza',0],['Elementos escasos, mal ubicados o sin relación con el riesgo',0.5],['Cubre lo básico con ubicaciones mejorables',1],['Ubicación coherente en las cuatro capas',1.5],['Diseño completo, priorizado por zonas críticas y sin redundancias innecesarias',2]]},
+    {k:'r2',t:'2. Cobertura de CCTV y detección (RA1 e; RA4 a, b)',s:'2. CCTV',lv:[['No entrega o no realiza',0],['Puntos ciegos graves u orientación incorrecta',0.5],['Cubre accesos principales con huecos',1],['Coberturas bien orientadas, con alcance y ángulo adecuados',1.5],['Cobertura solapada en zonas críticas, sin puntos ciegos y respetando la protección de datos',2]]},
+    {k:'r3',t:'3. Control de acceso e identificación (RA1 b, f)',s:'3. Accesos',lv:[['No entrega o no realiza',0],['Accesos sin control o mal resueltos',0.5],['Controla el acceso principal',1],['Controla los accesos de personas y vehículos',1.5],['Incluye también el acceso secundario, las zonas restringidas (SCADA, reactivos) y la custodia de llaves',2]]},
+    {k:'r4',t:'4. Perímetro, iluminación, señalización y rondas (RA1 c, d)',s:'4. Perímetro',lv:[['No entrega o no realiza',0],['Perímetro desprotegido o rondas ausentes',0.5],['Protección parcial del perímetro',1],['Perímetro terrestre y marítimo protegido, con rondas definidas',1.5],['Rondas no rutinarias por puntos críticos, iluminación que complementa el CCTV y señalización adecuada',2]]},
+    {k:'r5',t:'5. Gestión del presupuesto',s:'5. Presupuesto',lv:[['No entrega o no realiza',0],['Supera el presupuesto sin justificarlo',0.25],['Se ajusta, sin criterio de prioridad',0.5],['Se ajusta y prioriza lo crítico',0.75],['Optimiza la inversión y justifica las alternativas descartadas',1]]},
+    {k:'r6',t:'6. Justificación técnica y observaciones (RA2 d)',s:'6. Justificación',lv:[['No entrega o no realiza',0],['Sin justificaciones o genéricas',0.25],['Justifica algunos elementos',0.5],['Justifica todos los elementos con lenguaje técnico',0.75],['Además identifica carencias y propone mejoras con criterio',1]]}
   ];
   var EV_PHR={
-    a:[['no has hecho el recorrido de verificación',0],['has hecho el recorrido de verificación',1]],
-    b:[['te falta el checklist',0],['has completado el checklist',1]],
-    c:[['no presentas las rondas',0],['tus rondas omiten puntos críticos',0],['tus rondas tienen lagunas',0],['tus rondas son completas',1]],
-    d:[['no verificas bienes y medios',0],['tu verificación es parcial',0],['verificas bienes y medios con buenas propuestas',1],['verificas y propones mejoras',1]],
-    e:[['no registras las imágenes según la LOPD',0],['te falta indicar finalidad y custodia de las imágenes',0],['cumples la LOPD con las imágenes',1]]
+    r1:[['no presentas medios físicos ni electrónicos',0],['tus elementos son escasos o están mal ubicados',0],['debes mejorar la ubicación de los medios',0],['ubicas los medios con coherencia en las cuatro capas',1],['tu diseño de medios es completo y prioriza las zonas críticas',1]],
+    r2:[['no presentas cobertura de CCTV ni detección',0],['dejas puntos ciegos graves o cámaras mal orientadas',0],['quedan huecos en la cobertura de CCTV',0],['orientas bien el CCTV y la detección',1],['tu CCTV no deja puntos ciegos y respeta la protección de datos',1]],
+    r3:[['no presentas control de acceso',0],['dejas accesos sin control',0],['solo controlas el acceso principal',0],['controlas los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y las llaves',1]],
+    r4:[['no proteges el perímetro ni defines rondas',0],['el perímetro queda desprotegido o faltan rondas',0],['proteges el perímetro solo en parte',0],['proteges el perímetro y defines rondas',1],['resuelves muy bien rondas, iluminación y señalización',1]],
+    r5:[['no gestionas el presupuesto',0],['superas el presupuesto sin justificarlo',0],['te ajustas al presupuesto, pero sin priorizar',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas las alternativas',1]],
+    r6:[['no justificas los elementos',0],['tus justificaciones son genéricas',0],['justificas solo algunos elementos',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras',1]]
   };
   function evSummary(e){
     var pos=[],neg=[],t=evTotal(e);
-    RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)return;var ph=EV_PHR[c.k][v];if(!ph)return;(ph[1]?pos:neg).push(ph[0]);});
+    RUBRIC.forEach(function(c){var v=e.scores&&e.scores[c.k];if(v==null)return;var ix=-1;c.lv.forEach(function(l,i){if(l[1]===v)ix=i;});var ph=EV_PHR[c.k][ix];if(!ph)return;(ph[1]?pos:neg).push(ph[0]);});
     if(!pos.length&&!neg.length)return '';
     function join(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];}
     function cap(x){return x.charAt(0).toUpperCase()+x.slice(1);}
@@ -2441,6 +2443,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
   var RUB_MAX=RUBRIC.reduce(function(a,c){return a+c.lv[c.lv.length-1][1];},0);
   var EV_KEY='edam-evals-v1',evals=[],evCur=null,evMem={},evUrl=null,evDb=null;
   try{var evRaw=localStorage.getItem(EV_KEY);if(evRaw){var evO=JSON.parse(evRaw);if(Array.isArray(evO))evals=evO;}}catch(e){}
+  evals.forEach(function(e){var ok={};RUBRIC.forEach(function(c){ok[c.k]=1;});var sc={};for(var k in (e.scores||{}))if(ok[k])sc[k]=e.scores[k];e.scores=sc;});
   function evSave(){try{localStorage.setItem(EV_KEY,JSON.stringify(evals));}catch(e){}}
   function evDbOpen(){return new Promise(function(res){
     if(evDb)return res(evDb);
@@ -2510,7 +2513,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       var fs=document.createElement('fieldset');fs.className='ev-crit';var lg=document.createElement('legend');lg.textContent=c.t+' (máx. '+c.lv[c.lv.length-1][1]+')';fs.appendChild(lg);
       c.lv.forEach(function(l,i){var lb=document.createElement('label'),r=document.createElement('input');r.type='radio';r.name='ev-'+c.k;r.value=l[1];r.checked=e.scores[c.k]===l[1];
         r.addEventListener('change',function(){e.scores[c.k]=l[1];evSave();upTot();evRender();});
-        var sp=document.createElement('span');sp.textContent=l[0];var pt=document.createElement('span');pt.className='pt';pt.textContent=l[1]+(l[1]===1?' punto':' puntos');
+        var sp=document.createElement('span');sp.textContent=l[0];var pt=document.createElement('span');pt.className='pt';pt.textContent=fmtPt(l[1])+(l[1]===1?' punto':' puntos');
         lb.appendChild(r);lb.appendChild(sp);lb.appendChild(pt);fs.appendChild(lb);});
       rub.appendChild(fs);
     });
