@@ -2459,7 +2459,7 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     r3:[['incluir el control de acceso',0],['resolver los accesos que quedan sin control',0],['extender el control a todos los accesos de personas y vehículos',0],['controlas bien los accesos de personas y vehículos',1],['controlas todos los accesos, las zonas restringidas y la custodia de llaves',1]],
     r4:[['proteger el perímetro y definir las rondas',0],['reforzar el perímetro y añadir rondas',0],['completar la protección del perímetro y las rondas',0],['proteges el perímetro y defines bien las rondas',1],['resuelves de maravilla rondas, iluminación y señalización',1]],
     r5:[['explicar cómo gestionas el presupuesto',0],['ajustar la inversión al presupuesto o justificar el exceso',0],['priorizar lo crítico dentro del presupuesto',0],['te ajustas al presupuesto y priorizas lo crítico',1],['optimizas la inversión y justificas tus alternativas',1]],
-    r6:[['justificar cada elemento que colocas',0],['concretar más tus justificaciones',0],['justificar todos los elementos con lenguaje técnico',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras con criterio',1]]
+    r6:[['rellenar la «Justificación / nota» de cada elemento',0],['rellenar la «Justificación / nota» de los elementos con argumentos técnicos',0],['justificar todos los elementos con lenguaje técnico',0],['justificas todo con lenguaje técnico',1],['justificas con rigor y propones mejoras con criterio',1]]
   };
   function evFirstName(e){
     var n=String(e.name||'').trim();if(!n)return '';
@@ -2565,8 +2565,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     var ab=document.createElement('div');ab.className='ev-autobar';
     if(e.auto){
       var at=document.createElement('p');at.className='ev-hint';at.textContent='Puntuación propuesta automáticamente a partir del '+(e.src==='datos'?'contenido del plano':'texto del PDF')+'. Revísala y ajusta lo que consideres.';ab.appendChild(at);
-      var rc=document.createElement('button');rc.type='button';rc.className='btn small';rc.textContent='Volver a la propuesta automática';
-      rc.addEventListener('click',function(){e.scores=JSON.parse(JSON.stringify(e.auto.scores));e.sumAuto=true;e.sum=evSummary(e);evSave();evSelect(e.id,false);});ab.appendChild(rc);
+      var rc=document.createElement('button');rc.type='button';rc.className='btn small';rc.textContent='Recalcular propuesta automática';
+      rc.addEventListener('click',async function(){rc.disabled=true;rc.textContent='Analizando…';var keep=e.scores;e.scores={};e.sumAuto=true;var ok=await evAnalyze(e);if(!ok){e.scores=JSON.parse(JSON.stringify(e.auto.scores||keep||{}));e.sum=evSummary(e);evSave();}evRender();evSelect(e.id,false);});ab.appendChild(rc);
     }else{
       var an=document.createElement('button');an.type='button';an.className='btn small primary';an.textContent='Analizar este PDF y proponer puntuación';
       an.addEventListener('click',async function(){an.disabled=true;an.textContent='Analizando…';var ok=await evAnalyze(e);if(!ok)toast('No se pudo leer el PDF: puntúalo a mano');evRender();evSelect(e.id,false);});ab.appendChild(an);
@@ -2660,6 +2660,12 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
       var bu=/Presupuesto:\s*([\d\.\,]+)/.exec(txt);if(bu)M.budget=parseEur(bu[1]);
       var seen={};
       all.forEach(function(l){var m=/^([A-Z]{2,4})\s{1,}.+?\s+x(\d+)\s*$/.exec(l);if(m&&byCode[m[1]]&&!seen[m[1]]){seen[m[1]]=1;add(m[1],Number(m[2]));}});
+      /* Filas del inventario: «N.º  Cód. … Precio €  Justificación / nota» */
+      var rowsN=0,withN=0,rc={};
+      all.forEach(function(l){var m=/^(\d{1,3})\s+([A-Z]{2,4})\s+(.*?)\s([\d\.]+)\s*€\s*(.*)$/.exec(l);if(!m||!byCode[m[2]])return;
+        rowsN++;rc[m[2]]=(rc[m[2]]||0)+1;var note=m[5].trim();if(note&&note!=='-'&&note.length>=4)withN++;
+        var z=/(?:^|\s)([A-Z]{1,2}) · /.exec(m[3]);if(z){M.zonesHit[z[1]]=1;if(m[2]==='CF'||m[2]==='CP')M.camZones[z[1]]=1;if(/^(TE|BA|BO|LA|CE|AD)$/.test(m[2]))M.accZones[z[1]]=1;}});
+      if(rowsN){M.notes=withN/rowsN;if(rowsN>M.n){M.count={};M.n=0;M.layers={};for(var cc in rc)add(cc,rc[cc]);}}
       var oi=all.findIndex(function(l){return /^Observaciones finales/.test(l);});
       if(oi>=0){M.obs=all.slice(oi+1).filter(function(l){return !/^Supuesto did[aá]ctico|^P[aá]gina \d|^M[OÓ]DULO 1679|^EDAM ·|^Equipo \/ alumno/.test(l);}).join(' ').replace(/^Sin observaciones\.?$/,'').trim();}
     }
@@ -2719,8 +2725,8 @@ textarea{width:100%;min-height:160px;font-family:var(--font-mono);font-size:12px
     if(!M.n){S.r6=0;W.r6='Sin elementos que justificar.';}
     else if(M.notes!=null){
       var r=M.notes;
-      if(r<0.2&&obsL<60)S.r6=0.25;else if(r<0.6)S.r6=0.5;else if(r>=0.8&&has(mej)&&obsL>=120)S.r6=1;else S.r6=0.75;
-      W.r6=pct(r)+' de los elementos con justificación · observaciones de '+obsL+' caracteres'+(has(mej)?' · propone mejoras':'')+'.';
+      if(r<0.2)S.r6=obsL>=200?0.5:0.25;else if(r<0.6)S.r6=0.5;else if(r>=0.8&&has(mej)&&obsL>=120)S.r6=1;else S.r6=0.75;
+      W.r6=pct(r)+' de los elementos con «Justificación / nota» rellena · observaciones de '+obsL+' caracteres'+(has(mej)?' · propone mejoras':'')+'.';
     }else{
       if(obsL<40)S.r6=0.25;else if(obsL<200)S.r6=0.5;else S.r6=has(mej)&&obsL>=300?1:0.75;
       W.r6='Observaciones de '+obsL+' caracteres (PDF sin datos del inventario: revisa este criterio).';
